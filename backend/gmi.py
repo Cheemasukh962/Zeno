@@ -13,8 +13,8 @@ _client = OpenAI(
     base_url=(os.getenv("GMI_BASE_URL") or os.getenv("GMI_MAAS_BASE_URL")
               or "https://api.gmi-serving.com/v1"),
 )
-BRAIN = os.getenv("GMI_BRAIN_MODEL", "google/gemini-3-flash-preview")
-VISION = os.getenv("GMI_VISION_MODEL", "google/gemini-3-flash-preview")
+BRAIN = os.getenv("GMI_BRAIN_MODEL", "openai/gpt-5.4-mini")
+VISION = os.getenv("GMI_VISION_MODEL", "openai/gpt-5.4-mini")
 
 INTAKE_SYSTEM = """You are Tier Zero, a calm, patient IT helpdesk agent for non-technical users.
 A user just contacted you with a problem. Your FIRST job is to UNDERSTAND it - do NOT give fix steps yet.

@@ -106,6 +106,12 @@ def retrieve(text: str, scenarios: list[dict] | None = None,
         if dec.get("scenario_locked") and key in keys:
             return {"scenario_key": key, "match": True, "locked": True,
                     "confidence": CONF_LLM_LOCK, "say": dec.get("say", ""), "degraded": False}
+        # The LLM hedged. If the words CLEARLY match a known issue, lock anyway so the demo
+        # doesn't waste a turn on an unnecessary clarifying question.
+        ranked = _keyword_retrieve(convo, scenarios)
+        if ranked and ranked[0][1] >= LOCK_THRESHOLD:
+            return {"scenario_key": ranked[0][0], "match": True, "locked": True,
+                    "confidence": ranked[0][1], "say": "", "degraded": False}
         return {"scenario_key": key if key in keys else None,
                 "match": key in keys, "locked": False,
                 "confidence": LOCK_THRESHOLD - 0.01 if key in keys else 0.0,
