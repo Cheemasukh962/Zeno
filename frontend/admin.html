@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Tier Zero — Admin Console</title>
+
+<!-- React (no build step) -->
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+<!-- Tailwind -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = { theme: { extend: {
+    colors: { brand:"#e8341f", ink:"#0b0b0c", panel:"#141417" },
+    boxShadow: { card:"0 1px 3px rgba(0,0,0,.06), 0 8px 24px rgba(0,0,0,.04)" },
+    keyframes: { ping2:{'0%':{transform:'scale(1)',opacity:1},'75%,100%':{transform:'scale(2.2)',opacity:0}} },
+    animation: { ping2:'ping2 1.5s cubic-bezier(0,0,.2,1) infinite' },
+  }}};
+</script>
+<style>
+  body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+  .tnum{font-variant-numeric:tabular-nums}
+  ::-webkit-scrollbar{width:8px} ::-webkit-scrollbar-thumb{background:#2a2a2e;border-radius:8px}
+</style>
+</head>
+<body class="bg-ink text-white min-h-screen antialiased">
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect } = React;
+const SOURCE = "sample-activity.json";   // → "/admin/activity" when the endpoint is live
+const POLL_MS = 2000;
+const fmt = (e)=> new Date(e*1000).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit",second:"2-digit"});
+
+function Badge({ level }){
+  const map = {
+    low:    "bg-zinc-100 text-zinc-500",
+    medium: "bg-zinc-900 text-white",
+    high:   "bg-brand text-white",
+  };
+  return <span className={`text-[10px] font-bold tracking-wider uppercase px-2.5 py-1 rounded-full ${map[level]||map.low}`}>{level}</span>;
+}
+
+function LiveDot(){
+  return (
+    <span className="relative inline-flex w-2.5 h-2.5">
+      <span className="absolute inline-flex w-full h-full rounded-full bg-brand animate-ping2"></span>
+      <span className="relative inline-flex w-2.5 h-2.5 rounded-full bg-brand"></span>
+    </span>
+  );
+}
+
+function Header({ status, onDeploy, deployState }){
+  const live = status === "live";
+  const label = { idle:"Deploy Agent", loading:"Deploying…", done:"Deployed ✓" }[deployState];
+  return (
+    <header className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 bg-ink/90 backdrop-blur border-b border-white/10">
+      <div className="flex items-center gap-3">
+        <div className="w-7 h-7 rounded-lg bg-brand grid place-items-center font-black text-sm">T</div>
+        <div className="font-bold text-[15px] leading-none">Tier Zero
+          <span className="text-white/40 font-medium"> · Admin</span></div>
+      </div>
+      <div className="flex items-center gap-4">
+        <div className={`flex items-center gap-2 text-[13px] px-3 py-1.5 rounded-full border ${live?"border-brand/40 text-white":"border-white/15 text-white/50"}`}>
+          {live ? <LiveDot/> : <span className="w-2.5 h-2.5 rounded-full bg-white/30"></span>}
+          Agent <b className="font-semibold">{live?"Live":"Paused"}</b>
+        </div>
+        <button onClick={onDeploy} disabled={deployState==="loading"}
+          className="flex items-center gap-2 text-sm font-semibold px-4 py-2.5 rounded-xl bg-brand hover:brightness-110 active:scale-[.98] disabled:opacity-70 transition">
+          {deployState==="loading" && <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>}
+          {label}
+        </button>
+      </div>
+    </header>
+  );
+}
+
+function Metrics({ m }){
+  const cells = [
+    { k:"Tickets deflected", v:m.deflected },
+    { k:"Saved", v:"$"+m.saved_usd, accent:true },
+    { k:"Guides in library", v:m.library_size },
+    { k:"Cache hits", v:m.cache_hits },
+    { k:"Active now", v:m.active },
+  ];
+  return (
+    <section className="grid grid-cols-2 md:grid-cols-5 gap-3 px-6 pt-5">
+      {cells.map((c,i)=>(
+        <div key={i} className="bg-white text-ink rounded-2xl px-5 py-4 shadow-card">
+          <div className={`text-[28px] font-bold tracking-tight tnum ${c.accent?"text-brand":""}`}>{c.v}</div>
+          <div className="text-[11px] uppercase tracking-[1.3px] text-zinc-400 mt-1">{c.k}</div>
+        </div>
+      ))}
+    </section>
+  );
+}
+
+function ActiveCard({ c }){
+  const pct = Math.round((c.step_idx/((c.step_total-1)||1))*100);
+  return (
+    <div className="bg-white text-ink rounded-2xl p-4 shadow-card border-l-[3px] border-brand">
+      <div className="flex items-center justify-between gap-3">
+        <span className="flex items-center gap-2 text-[13px] text-zinc-400">
+          <LiveDot/> call_<span className="tnum text-zinc-600 font-medium">{c.call_id}</span> · {fmt(c.started_at)}
+        </span>
+        <Badge level={c.complexity}/>
+      </div>
+      <div className="text-[16px] font-semibold mt-2.5 mb-3">{c.scenario_title}</div>
+      <div className="flex items-center gap-3">
+        <div className="flex-1 h-2 bg-zinc-100 rounded-full overflow-hidden">
+          <div className="h-full bg-ink rounded-full transition-all duration-500" style={{width:pct+"%"}}/>
+        </div>
+        <span className="text-[12px] text-zinc-400 tnum shrink-0">Step {c.step_idx+1} / {c.step_total}</span>
+      </div>
+    </div>
+  );
+}
+
+function HistoryRow({ c }){
+  const esc = c.status === "escalated";
+  return (
+    <div className="flex items-center gap-3 bg-white text-ink rounded-2xl px-4 py-3 shadow-card">
+      <span className={`w-6 h-6 rounded-full grid place-items-center text-xs font-bold shrink-0 ${esc?"bg-red-50 text-brand":"bg-emerald-50 text-emerald-600"}`}>{esc?"!":"✓"}</span>
+      <span className="text-[12px] text-zinc-400 tnum w-14 shrink-0">{fmt(c.updated_at)}</span>
+      <span className="flex-1 text-[14px] font-medium truncate">
+        {c.scenario_title}{c.cache_hit && <span className="text-brand ml-1" title="Served from library">⚡</span>}
+      </span>
+      <Badge level={c.complexity}/>
+    </div>
+  );
+}
+
+function Empty({ text }){
+  return <div className="text-white/35 text-sm py-6 px-4 border border-dashed border-white/15 rounded-2xl text-center">{text}</div>;
+}
+
+function Column({ title, count, children }){
+  return (
+    <div>
+      <h2 className="text-[12px] uppercase tracking-[1.5px] text-white/40 mb-3 flex items-center gap-2">
+        {title}{count!=null && <span className="bg-white text-ink text-[11px] font-semibold rounded-full px-2 py-0.5 tnum">{count}</span>}
+      </h2>
+      <div className="flex flex-col gap-3">{children}</div>
+    </div>
+  );
+}
+
+function App(){
+  const [data, setData] = useState(null);
+  const [err, setErr] = useState(false);
+  const [deployState, setDeployState] = useState("idle");
+
+  useEffect(()=>{
+    let on = true;
+    const poll = async ()=>{
+      try { const d = await (await fetch(SOURCE,{cache:"no-store"})).json(); if(on){ setData(d); setErr(false); } }
+      catch(e){ if(on) setErr(true); }
+    };
+    poll(); const id = setInterval(poll, POLL_MS);
+    return ()=>{ on=false; clearInterval(id); };
+  },[]);
+
+  const onDeploy = ()=>{
+    setDeployState("loading");
+    setTimeout(()=>{ setDeployState("done"); setData(d=>d?{...d, agent_status:"live"}:d);
+      setTimeout(()=>setDeployState("idle"), 1800); }, 1500);
+  };
+
+  const m = data?.metrics || { deflected:0, saved_usd:0, library_size:0, cache_hits:0, active:0 };
+  const active = data?.active || [];
+  const history = data?.history || [];
+
+  return (
+    <>
+      <Header status={err?"paused":(data?.agent_status||"paused")} onDeploy={onDeploy} deployState={deployState}/>
+      <Metrics m={m}/>
+      <main className="max-w-[1200px] mx-auto px-6 py-6 grid md:grid-cols-2 gap-6 items-start">
+        <Column title="Live Activity" count={active.length}>
+          {active.length ? active.map(c=><ActiveCard key={c.call_id} c={c}/>) : <Empty text={err?"Can't reach the agent.":"No active calls right now."}/>}
+        </Column>
+        <Column title="Resolved History">
+          {history.length ? history.map(c=><HistoryRow key={c.call_id} c={c}/>) : <Empty text="No resolved tickets yet."/>}
+        </Column>
+      </main>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
