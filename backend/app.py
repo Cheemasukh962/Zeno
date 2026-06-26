@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import deepgram_client, orchestrator, store
@@ -19,6 +19,11 @@ app = FastAPI(title="Tier Zero")
 FRONT = os.path.join(os.path.dirname(__file__), "..", "frontend")
 app.mount("/shots", StaticFiles(directory=os.path.join(FRONT, "shots")), name="shots")
 app.mount("/guides", StaticFiles(directory=os.path.join(FRONT, "guides")), name="guides")
+
+
+@app.get("/")
+def root():
+    return RedirectResponse("/login.html")
 
 
 @app.get("/health")
@@ -74,3 +79,8 @@ async def turn(payload: dict):
                                    payload.get("text", ""), img)
     res.pop("_audio", None)
     return JSONResponse(res)
+
+
+# serve the frontend UI (login/widget/dashboard). MUST be last so the API routes,
+# /ws, /shots and /guides above take precedence over this catch-all mount.
+app.mount("/", StaticFiles(directory=FRONT, html=True), name="ui")

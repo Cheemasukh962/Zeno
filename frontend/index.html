@@ -267,6 +267,7 @@ function connect(){
     if(r.annotated_url) showShot(r.annotated_url);
     if(r.request_screenshot) flashShotBtn();
     if(r.walkthrough) showGuide(r.walkthrough);
+    if(r.escalation) showEscalation(r.escalation);                                          // handed to a human
     if(r.cache_hit) document.getElementById('cachePill').style.display='inline-block';
     if((r.walkthrough || r.cache_hit) && window.resolveLatestTicket) resolveLatestTicket();  // ticket solved
     if(r.metrics) updateMetrics(r.metrics);
@@ -286,6 +287,13 @@ function showGuide(w){ let h='<b>'+w.title+'</b><ol>';
   (w.steps||[]).forEach(s=> h+='<li>'+(s.text||s)+'</li>'); h+='</ol>';
   if(w.html_url) h+='<a href="'+w.html_url+'" target="_blank">Open your full guide ↗</a>';
   document.getElementById('guide').innerHTML=h; }
+function showEscalation(t){
+  const pri = t.priority ? ' · '+String(t.priority).toUpperCase() : '';
+  document.getElementById('guide').innerHTML =
+    '<div style="border:1px solid rgba(232,52,31,.35);background:rgba(232,52,31,.10);border-radius:12px;padding:14px">'
+    + '<div style="font-weight:700;font-size:14.5px">🛟 Handed to a human · ticket '+(t.id||'')+pri+'</div>'
+    + '<div class="placeholder" style="margin-top:6px">A specialist now has your full transcript — no need to repeat yourself. They\'ll follow up shortly.</div>'
+    + '</div>'; }
 function updateMetrics(m){ document.getElementById('mDef').textContent=m.deflected;
   document.getElementById('mSaved').textContent='$'+m.saved_usd;
   document.getElementById('mLib').textContent=m.library_size; }
