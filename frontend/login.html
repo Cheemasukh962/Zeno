@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Tier Zero — Sign in</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script>
+  tailwind.config = { theme: { extend: {
+    colors: { brand:"#e8341f", brandl:"#ff6a4d", brandd:"#c01f0e", ink:"#0b0b0c", panel:"#141417" },
+    fontFamily: { sans:['Inter','system-ui','sans-serif'] },
+  }}};
+</script>
+<script src="auth.js"></script>
+<style>
+  :root{ --brand:#e8341f; --ink:#0b0b0c }
+  *{ -webkit-font-smoothing:antialiased }
+  body{ font-family:'Inter',system-ui,sans-serif; background:var(--ink); min-height:100vh; position:relative; overflow:hidden }
+  body::before{ content:""; position:fixed; inset:0; pointer-events:none;
+    background:
+      radial-gradient(820px circle at 18% 18%, rgba(232,52,31,.28), transparent 52%),
+      radial-gradient(680px circle at 90% 90%, rgba(255,106,77,.12), transparent 50%); }
+  body::after{ content:""; position:fixed; inset:0; pointer-events:none; opacity:.5;
+    background-image:linear-gradient(rgba(255,255,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px);
+    background-size:46px 46px; -webkit-mask-image:radial-gradient(circle at 30% 30%,#000,transparent 70%); mask-image:radial-gradient(circle at 30% 30%,#000,transparent 70%); }
+  .glass{ background:rgba(255,255,255,.045); border:1px solid rgba(255,255,255,.09);
+    backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.07), 0 40px 80px -40px rgba(0,0,0,.9); }
+  .fld{ width:100%; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.10);
+    border-radius:12px; padding:12px 14px; color:#fff; font-size:14.5px; outline:none; transition:.18s; }
+  .fld::placeholder{ color:rgba(255,255,255,.35) }
+  .fld:focus{ border-color:rgba(232,52,31,.6); box-shadow:0 0 0 3px rgba(232,52,31,.18); background:rgba(255,255,255,.06) }
+  .btn{ width:100%; padding:13px; border-radius:12px; font-weight:600; font-size:14.5px; color:#fff; border:0; cursor:pointer;
+    background:linear-gradient(150deg,#ff5a3c,#c01f0e); box-shadow:0 16px 34px -14px rgba(232,52,31,.85); transition:.18s; }
+  .btn:hover{ filter:brightness(1.07) } .btn:active{ transform:scale(.985) } .btn:disabled{ opacity:.65; cursor:default }
+  .seg{ transition:.2s } .rise{ animation:rise .5s cubic-bezier(.2,.7,.2,1) both }
+  @keyframes rise{ from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:none} }
+  @keyframes spin{to{transform:rotate(360deg)}} .spin{animation:spin .8s linear infinite}
+  .grad{ background:linear-gradient(90deg,#fff,#ffd9d1); -webkit-background-clip:text; background-clip:text; color:transparent }
+</style>
+</head>
+<body class="text-white">
+<main class="relative z-10 min-h-screen grid lg:grid-cols-2">
+
+  <!-- left: brand / value -->
+  <section class="hidden lg:flex flex-col justify-between p-12 xl:p-16">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl grid place-items-center font-black text-white"
+           style="background:linear-gradient(150deg,#ff5a3c,#c01f0e);box-shadow:0 10px 24px -8px rgba(232,52,31,.8)">T</div>
+      <div class="font-bold text-[16px] grad">Tier Zero</div>
+    </div>
+    <div class="max-w-md rise">
+      <h1 class="text-[40px] xl:text-[46px] font-extrabold leading-[1.05] tracking-tight">
+        IT help that <span class="grad">talks back</span>.
+      </h1>
+      <p class="text-white/55 mt-5 text-[15px] leading-relaxed">
+        The voice + vision agent that resolves Tier-1 tickets before a human gets involved —
+        triaging every problem <b class="text-white/80">L1 / L2 / L3</b> and fixing the easy ones instantly.
+      </p>
+      <div class="flex gap-6 mt-9">
+        <div><div class="text-[26px] font-extrabold">50–80%</div><div class="text-[12px] text-white/45 mt-1">tickets are Tier-1</div></div>
+        <div><div class="text-[26px] font-extrabold">~$20</div><div class="text-[12px] text-white/45 mt-1">saved per deflection</div></div>
+        <div><div class="text-[26px] font-extrabold">~$0</div><div class="text-[12px] text-white/45 mt-1">on a cache hit</div></div>
+      </div>
+    </div>
+    <div class="text-[12px] text-white/30">Beta Fund AI Agents Hackathon · Agents for Hire</div>
+  </section>
+
+  <!-- right: auth card -->
+  <section class="flex items-center justify-center p-6 sm:p-10">
+    <div class="glass rounded-3xl w-full max-w-[420px] p-7 sm:p-9 rise">
+      <!-- mobile logo -->
+      <div class="lg:hidden flex items-center gap-2.5 mb-6">
+        <div class="w-9 h-9 rounded-xl grid place-items-center font-black text-white" style="background:linear-gradient(150deg,#ff5a3c,#c01f0e)">T</div>
+        <span class="font-bold grad">Tier Zero</span>
+      </div>
+
+      <h2 id="title" class="text-[22px] font-bold tracking-tight">Welcome back</h2>
+      <p id="sub" class="text-white/45 text-[13.5px] mt-1">Sign in to continue.</p>
+
+      <!-- mode tabs -->
+      <div class="grid grid-cols-2 gap-1 p-1 mt-6 rounded-xl bg-white/5 ring-1 ring-white/10 text-[13.5px] font-medium">
+        <button data-mode="signin" class="modeTab seg py-2 rounded-lg">Sign in</button>
+        <button data-mode="signup" class="modeTab seg py-2 rounded-lg text-white/55">Create account</button>
+      </div>
+
+      <!-- role toggle -->
+      <div class="mt-5">
+        <div class="text-[11px] uppercase tracking-[1.3px] text-white/40 mb-2">I am a</div>
+        <div class="grid grid-cols-2 gap-2">
+          <button data-role="user" class="roleTab seg flex items-center gap-2 px-3 py-2.5 rounded-xl ring-1 text-[13.5px]">
+            <span class="text-base">🧑‍💻</span> End user
+          </button>
+          <button data-role="admin" class="roleTab seg flex items-center gap-2 px-3 py-2.5 rounded-xl ring-1 text-[13.5px]">
+            <span class="text-base">🛡️</span> Admin
+          </button>
+        </div>
+      </div>
+
+      <!-- form -->
+      <form id="form" class="mt-5 flex flex-col gap-3" autocomplete="off" novalidate>
+        <div id="nameWrap" class="hidden">
+          <input id="name" class="fld" type="text" placeholder="Full name"/>
+        </div>
+        <input id="email" class="fld" type="email" placeholder="Email address"/>
+        <input id="password" class="fld" type="password" placeholder="Password (min 6 chars)"/>
+        <div id="err" class="hidden text-[13px] text-brand bg-brand/10 ring-1 ring-brand/25 rounded-lg px-3 py-2"></div>
+        <button id="submit" class="btn mt-1" type="submit">Sign in</button>
+      </form>
+
+      <p class="text-[12px] text-white/30 mt-5 leading-relaxed">
+        Demo accounts are stored locally in your browser. <span id="switchHint"></span>
+      </p>
+    </div>
+  </section>
+</main>
+
+<script>
+  // if already signed in, skip straight to the right home
+  (function(){ const s = window.Zeno && Zeno.session(); if (s) location.href = Zeno.routeFor(s.role); })();
+
+  let mode = "signin", role = "user";
+  const $ = (id)=>document.getElementById(id);
+  const modeTabs = [...document.querySelectorAll(".modeTab")];
+  const roleTabs = [...document.querySelectorAll(".roleTab")];
+
+  function paintMode(){
+    modeTabs.forEach(t=>{
+      const on = t.dataset.mode===mode;
+      t.className = "modeTab seg py-2 rounded-lg " + (on ? "bg-white text-ink font-semibold shadow" : "text-white/55");
+    });
+    const signup = mode==="signup";
+    $("nameWrap").classList.toggle("hidden", !signup);
+    $("title").textContent = signup ? "Create your account" : "Welcome back";
+    $("sub").textContent  = signup ? "Start deflecting tickets in seconds." : "Sign in to continue.";
+    $("submit").textContent = signup ? "Create account" : "Sign in";
+    $("switchHint").textContent = signup ? "Already have one? Tap “Sign in”." : "New here? Tap “Create account”.";
+    hideErr();
+  }
+  function paintRole(){
+    roleTabs.forEach(t=>{
+      const on = t.dataset.role===role;
+      t.className = "roleTab seg flex items-center gap-2 px-3 py-2.5 rounded-xl ring-1 text-[13.5px] " +
+        (on ? "bg-brand/15 ring-brand/50 text-white" : "ring-white/10 text-white/55 hover:text-white/80");
+    });
+  }
+  function showErr(m){ const e=$("err"); e.textContent=m; e.classList.remove("hidden"); }
+  function hideErr(){ $("err").classList.add("hidden"); }
+
+  modeTabs.forEach(t=>t.onclick=()=>{ mode=t.dataset.mode; paintMode(); });
+  roleTabs.forEach(t=>t.onclick=()=>{ role=t.dataset.role; paintRole(); });
+
+  $("form").addEventListener("submit", async (e)=>{
+    e.preventDefault(); hideErr();
+    const btn=$("submit"); const orig=btn.textContent;
+    btn.disabled=true; btn.innerHTML='<span class="inline-block w-4 h-4 border-2 border-white/40 border-t-white rounded-full spin align-[-2px]"></span>';
+    try{
+      const payload={ name:$("name").value, email:$("email").value, password:$("password").value, role };
+      const u = mode==="signup" ? await Zeno.signup(payload) : await Zeno.login(payload);
+      location.href = Zeno.routeFor(u.role);
+    }catch(err){
+      showErr(err.message || "Something went wrong.");
+      btn.disabled=false; btn.textContent=orig;
+    }
+  });
+
+  paintMode(); paintRole();
+</script>
+</body>
+</html>

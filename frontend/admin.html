@@ -5,31 +5,88 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Tier Zero — Admin Console</title>
 
+<!-- auth guard: admins only (redirects to login otherwise) -->
+<script src="auth.js"></script>
+<script>(function(){ if (window.Zeno) Zeno.requireRole("admin"); })();</script>
+
 <!-- React (no build step) -->
 <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
 <!-- Tailwind -->
 <script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script>
   tailwind.config = { theme: { extend: {
-    colors: { brand:"#e8341f", ink:"#0b0b0c", panel:"#141417" },
-    boxShadow: { card:"0 1px 3px rgba(0,0,0,.06), 0 8px 24px rgba(0,0,0,.04)" },
-    keyframes: { ping2:{'0%':{transform:'scale(1)',opacity:1},'75%,100%':{transform:'scale(2.2)',opacity:0}} },
-    animation: { ping2:'ping2 1.5s cubic-bezier(0,0,.2,1) infinite' },
+    colors: { brand:"#e8341f", brandl:"#ff6a4d", brandd:"#c01f0e", ink:"#0b0b0c", panel:"#141417" },
+    fontFamily: { sans:['Inter','system-ui','-apple-system','Segoe UI','sans-serif'] },
   }}};
 </script>
 <style>
-  body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
-  .tnum{font-variant-numeric:tabular-nums}
-  ::-webkit-scrollbar{width:8px} ::-webkit-scrollbar-thumb{background:#2a2a2e;border-radius:8px}
+  :root{ --brand:#e8341f; --brandl:#ff6a4d; --brandd:#c01f0e; --ink:#0b0b0c; }
+  *{ -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility }
+  body{ font-family:'Inter',system-ui,sans-serif; background:var(--ink); position:relative; overflow-x:hidden }
+  .tnum{ font-variant-numeric:tabular-nums }
+
+  /* layered background: brand glow + faint grid */
+  body::before{ content:""; position:fixed; inset:0; z-index:0; pointer-events:none;
+    background:
+      radial-gradient(720px circle at 50% -12%, rgba(232,52,31,.20), transparent 55%),
+      radial-gradient(900px circle at 110% 8%, rgba(255,106,77,.08), transparent 50%); }
+  body::after{ content:""; position:fixed; inset:0; z-index:0; pointer-events:none; opacity:.5;
+    background-image:
+      linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+    background-size:46px 46px;
+    -webkit-mask-image:radial-gradient(circle at 50% 0%, #000 0%, transparent 75%);
+            mask-image:radial-gradient(circle at 50% 0%, #000 0%, transparent 75%); }
+  #root{ position:relative; z-index:1 }
+
+  /* glass cards */
+  .glass{ background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08);
+    backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 24px 48px -28px rgba(0,0,0,.85);
+    transition: transform .22s cubic-bezier(.2,.7,.2,1), border-color .22s, box-shadow .22s; }
+  .lift:hover{ transform:translateY(-3px); border-color:rgba(232,52,31,.45);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 28px 60px -26px rgba(0,0,0,.9), 0 0 0 1px rgba(232,52,31,.15), 0 18px 50px -24px rgba(232,52,31,.35); }
+
+  /* hero (Saved) metric */
+  .hero{ background:linear-gradient(150deg, #ff5a3c, var(--brand) 55%, var(--brandd));
+    border:1px solid rgba(255,255,255,.14);
+    box-shadow: 0 24px 60px -24px rgba(232,52,31,.65), inset 0 1px 0 rgba(255,255,255,.25); }
+
+  /* progress bar with shimmer */
+  .bar{ background:rgba(255,255,255,.10) }
+  .bar > i{ display:block; height:100%; border-radius:inherit; position:relative; overflow:hidden;
+    background:linear-gradient(90deg, var(--brandd), var(--brand) 50%, var(--brandl));
+    box-shadow:0 0 14px rgba(232,52,31,.6); transition:width .6s cubic-bezier(.2,.7,.2,1) }
+  .bar > i::after{ content:""; position:absolute; inset:0;
+    background:linear-gradient(90deg, transparent, rgba(255,255,255,.45), transparent);
+    transform:translateX(-100%); animation:shimmer 1.8s infinite }
+  @keyframes shimmer{ 100%{ transform:translateX(100%) } }
+
+  /* entrance */
+  .rise{ opacity:0; animation:rise .5s cubic-bezier(.2,.7,.2,1) forwards }
+  @keyframes rise{ from{opacity:0; transform:translateY(10px)} to{opacity:1; transform:none} }
+
+  /* live dot + high-badge glow */
+  @keyframes ping2{ 0%{transform:scale(1);opacity:1} 75%,100%{transform:scale(2.4);opacity:0} }
+  .ping{ animation:ping2 1.6s cubic-bezier(0,0,.2,1) infinite }
+  @keyframes spin{ to{transform:rotate(360deg)} } .spin{ animation:spin .8s linear infinite }
+  .glow-high{ box-shadow:0 0 0 1px rgba(232,52,31,.4), 0 0 16px rgba(232,52,31,.55) }
+
+  .grad{ background:linear-gradient(90deg,#fff, #ffd9d1); -webkit-background-clip:text; background-clip:text; color:transparent }
+  ::-webkit-scrollbar{ width:9px } ::-webkit-scrollbar-thumb{ background:#2a2a2e; border-radius:9px; border:2px solid var(--ink) }
+  ::-webkit-scrollbar-thumb:hover{ background:#3a3a40 }
 </style>
 </head>
-<body class="bg-ink text-white min-h-screen antialiased">
+<body class="text-white min-h-screen">
 <div id="root"></div>
 
 <script type="text/babel">
-const { useState, useEffect } = React;
+const { useState, useEffect, useRef } = React;
 const LIVE_SOURCE = "/admin/activity";       // real backend endpoint (added in Phase 2)
 const MOCK_SOURCE = "sample-activity.json";  // fallback so the dashboard renders standalone
 const POLL_MS = 2000;
@@ -42,20 +99,35 @@ const TIER = { low:"low", medium:"medium", high:"high",
   auto_resolve:"low", guided:"medium", escalate:"high" };
 const LABEL = { low:"L1 · low", medium:"L2 · medium", high:"L3 · high" };
 
+// inline icons (stroke = currentColor)
+const Ico = ({d, fill}) => (
+  <svg viewBox="0 0 24 24" className="w-[18px] h-[18px]" fill={fill?"currentColor":"none"}
+       stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{d}</svg>
+);
+const icons = {
+  deflected: <Ico d={<><path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/><path d="M9 12l2 2 4-4"/></>}/>,
+  saved:     <Ico d={<><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></>}/>,
+  library:   <Ico d={<><path d="M3 5l8-2v18l-8 2z"/><path d="M11 3l8 2v14l-8 2"/></>}/>,
+  cache:     <Ico d={<><path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z"/></>} fill/>,
+  active:    <Ico d={<><path d="M3 12h4l3 8 4-16 3 8h4"/></>}/>,
+};
+
 function Badge({ level }){
   const t = TIER[level] || "low";
-  const map = {
-    low:    "bg-zinc-100 text-zinc-500",
-    medium: "bg-zinc-900 text-white",
-    high:   "bg-brand text-white",
-  };
-  return <span className={`text-[10px] font-bold tracking-wider uppercase px-2.5 py-1 rounded-full ${map[t]}`}>{LABEL[t]}</span>;
+  const cls = {
+    low:    "bg-white/10 text-white/65 ring-1 ring-white/10",
+    medium: "bg-white text-ink ring-1 ring-white/20",
+    high:   "bg-brand text-white glow-high",
+  }[t];
+  return <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold tracking-wider uppercase px-2.5 py-1 rounded-full ${cls}`}>
+    <span className={`w-1.5 h-1.5 rounded-full ${t==="low"?"bg-white/50":t==="medium"?"bg-ink":"bg-white"}`}></span>{LABEL[t]}
+  </span>;
 }
 
 function LiveDot(){
   return (
     <span className="relative inline-flex w-2.5 h-2.5">
-      <span className="absolute inline-flex w-full h-full rounded-full bg-brand animate-ping2"></span>
+      <span className="absolute inline-flex w-full h-full rounded-full bg-brand ping"></span>
       <span className="relative inline-flex w-2.5 h-2.5 rounded-full bg-brand"></span>
     </span>
   );
@@ -65,76 +137,115 @@ function Header({ status, onDeploy, deployState }){
   const live = status === "live";
   const label = { idle:"Deploy Agent", loading:"Deploying…", done:"Deployed ✓" }[deployState];
   return (
-    <header className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 bg-ink/90 backdrop-blur border-b border-white/10">
-      <div className="flex items-center gap-3">
-        <div className="w-7 h-7 rounded-lg bg-brand grid place-items-center font-black text-sm">T</div>
-        <div className="font-bold text-[15px] leading-none">Tier Zero
-          <span className="text-white/40 font-medium"> · Admin</span></div>
-      </div>
-      <div className="flex items-center gap-4">
-        <div className={`flex items-center gap-2 text-[13px] px-3 py-1.5 rounded-full border ${live?"border-brand/40 text-white":"border-white/15 text-white/50"}`}>
-          {live ? <LiveDot/> : <span className="w-2.5 h-2.5 rounded-full bg-white/30"></span>}
-          Agent <b className="font-semibold">{live?"Live":"Paused"}</b>
+    <header className="sticky top-0 z-20 backdrop-blur-xl bg-ink/70 border-b border-white/10">
+      <div className="max-w-[1200px] mx-auto flex items-center justify-between px-6 py-3.5">
+        <div className="flex items-center gap-3">
+          <div className="relative w-9 h-9 rounded-xl grid place-items-center font-black text-[15px] text-white"
+               style={{background:"linear-gradient(150deg,#ff5a3c,#c01f0e)", boxShadow:"0 8px 20px -6px rgba(232,52,31,.7)"}}>
+            T<span className="absolute inset-0 rounded-xl ring-1 ring-white/25"></span>
+          </div>
+          <div className="leading-tight">
+            <div className="font-bold text-[15px] tracking-tight grad">Tier Zero</div>
+            <div className="text-[11px] text-white/40 -mt-0.5 tracking-wide">Admin Console</div>
+          </div>
         </div>
-        <button onClick={onDeploy} disabled={deployState==="loading"}
-          className="flex items-center gap-2 text-sm font-semibold px-4 py-2.5 rounded-xl bg-brand hover:brightness-110 active:scale-[.98] disabled:opacity-70 transition">
-          {deployState==="loading" && <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>}
-          {label}
-        </button>
+        <div className="flex items-center gap-3">
+          <div className={`flex items-center gap-2 text-[12.5px] px-3 py-1.5 rounded-full border ${live?"border-brand/40 bg-brand/10 text-white":"border-white/15 text-white/50"}`}>
+            {live ? <LiveDot/> : <span className="w-2.5 h-2.5 rounded-full bg-white/30"></span>}
+            Agent <b className="font-semibold">{live?"Live":"Paused"}</b>
+          </div>
+          <button onClick={onDeploy} disabled={deployState==="loading"}
+            className="group flex items-center gap-2 text-[13.5px] font-semibold px-4 py-2.5 rounded-xl text-white active:scale-[.97] disabled:opacity-70 transition"
+            style={{background:"linear-gradient(150deg,#ff5a3c,#c01f0e)", boxShadow:"0 10px 26px -10px rgba(232,52,31,.8)"}}>
+            {deployState==="loading" && <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full spin"></span>}
+            {label}
+          </button>
+          <Account/>
+        </div>
       </div>
     </header>
   );
 }
 
+function Account(){
+  const s = (window.Zeno && Zeno.session()) || { name:"Guest", role:"admin" };
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative pl-1.5 ml-1 border-l border-white/10">
+      <button onClick={()=>setOpen(o=>!o)} className="flex items-center gap-2 pl-1 pr-2 py-1 rounded-full hover:bg-white/5 transition">
+        <span className="w-8 h-8 rounded-full grid place-items-center text-[12px] font-bold text-white"
+              style={{background:"linear-gradient(150deg,#ff5a3c,#c01f0e)"}}>{Zeno.initials(s.name)}</span>
+        <span className="hidden sm:block text-[12.5px] text-white/70 font-medium max-w-[120px] truncate">{s.name}</span>
+      </button>
+      {open && (
+        <div className="absolute right-0 mt-2 w-52 glass rounded-xl p-1.5 text-[13px] z-30">
+          <div className="px-3 py-2 text-white/50 text-[12px] border-b border-white/10 mb-1 truncate">{s.email||"signed in"}</div>
+          <button onClick={()=>Zeno.logout()} className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 text-white/80 flex items-center gap-2">
+            <span>↩</span> Sign out
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Metric({ icon, k, v, i, hero }){
+  return (
+    <div style={{animationDelay:(i*55)+"ms"}}
+      className={`rise lift rounded-2xl px-5 py-4 ${hero?"hero text-white":"glass text-white"}`}>
+      <div className="flex items-center justify-between">
+        <div className={`w-9 h-9 rounded-xl grid place-items-center ${hero?"bg-white/20 text-white":"bg-brand/15 text-brand"}`}>{icon}</div>
+      </div>
+      <div className="text-[30px] leading-none font-extrabold tracking-tight tnum mt-3">{v}</div>
+      <div className={`text-[10.5px] uppercase tracking-[1.4px] mt-1.5 ${hero?"text-white/80":"text-white/40"}`}>{k}</div>
+    </div>
+  );
+}
+
 function Metrics({ m }){
   const cells = [
-    { k:"Tickets deflected", v:m.deflected },
-    { k:"Saved", v:"$"+m.saved_usd, accent:true },
-    { k:"Guides in library", v:m.library_size },
-    { k:"Cache hits", v:m.cache_hits },
-    { k:"Active now", v:m.active },
+    { k:"Tickets deflected", v:m.deflected, icon:icons.deflected },
+    { k:"Saved", v:"$"+m.saved_usd, icon:icons.saved, hero:true },
+    { k:"Guides in library", v:m.library_size, icon:icons.library },
+    { k:"Cache hits", v:m.cache_hits, icon:icons.cache },
+    { k:"Active now", v:m.active, icon:icons.active },
   ];
   return (
-    <section className="grid grid-cols-2 md:grid-cols-5 gap-3 px-6 pt-5">
-      {cells.map((c,i)=>(
-        <div key={i} className="bg-white text-ink rounded-2xl px-5 py-4 shadow-card">
-          <div className={`text-[28px] font-bold tracking-tight tnum ${c.accent?"text-brand":""}`}>{c.v}</div>
-          <div className="text-[11px] uppercase tracking-[1.3px] text-zinc-400 mt-1">{c.k}</div>
-        </div>
-      ))}
+    <section className="max-w-[1200px] mx-auto grid grid-cols-2 md:grid-cols-5 gap-3.5 px-6 pt-6">
+      {cells.map((c,i)=><Metric key={i} i={i} {...c}/>)}
     </section>
   );
 }
 
-function ActiveCard({ c }){
+function ActiveCard({ c, i }){
   const pct = Math.round((c.step_idx/((c.step_total-1)||1))*100);
   return (
-    <div className="bg-white text-ink rounded-2xl p-4 shadow-card border-l-[3px] border-brand">
+    <div style={{animationDelay:(i*70)+"ms"}} className="rise lift glass rounded-2xl p-4 relative overflow-hidden">
+      <span className="absolute left-0 top-0 bottom-0 w-[3px] bg-brand"></span>
       <div className="flex items-center justify-between gap-3">
-        <span className="flex items-center gap-2 text-[13px] text-zinc-400">
-          <LiveDot/> call_<span className="tnum text-zinc-600 font-medium">{c.call_id}</span> · {fmt(c.started_at)}
+        <span className="flex items-center gap-2 text-[12.5px] text-white/45">
+          <LiveDot/> call_<span className="tnum text-white/70 font-medium">{c.call_id}</span> · {fmt(c.started_at)}
         </span>
         <Badge level={c.complexity}/>
       </div>
-      <div className="text-[16px] font-semibold mt-2.5 mb-3">{c.scenario_title}</div>
+      <div className="text-[16px] font-semibold mt-2.5 mb-3 tracking-tight">{c.scenario_title}</div>
       <div className="flex items-center gap-3">
-        <div className="flex-1 h-2 bg-zinc-100 rounded-full overflow-hidden">
-          <div className="h-full bg-ink rounded-full transition-all duration-500" style={{width:pct+"%"}}/>
-        </div>
-        <span className="text-[12px] text-zinc-400 tnum shrink-0">Step {c.step_idx+1} / {c.step_total}</span>
+        <div className="bar flex-1 h-2 rounded-full overflow-hidden"><i style={{width:pct+"%"}}/></div>
+        <span className="text-[12px] text-white/40 tnum shrink-0">Step {c.step_idx+1} / {c.step_total}</span>
       </div>
     </div>
   );
 }
 
-function HistoryRow({ c }){
+function HistoryRow({ c, i }){
   const esc = c.status === "escalated";
   return (
-    <div className="flex items-center gap-3 bg-white text-ink rounded-2xl px-4 py-3 shadow-card">
-      <span className={`w-6 h-6 rounded-full grid place-items-center text-xs font-bold shrink-0 ${esc?"bg-red-50 text-brand":"bg-emerald-50 text-emerald-600"}`}>{esc?"!":"✓"}</span>
-      <span className="text-[12px] text-zinc-400 tnum w-14 shrink-0">{fmt(c.updated_at)}</span>
+    <div style={{animationDelay:(i*55)+"ms"}} className="rise lift glass flex items-center gap-3 rounded-2xl px-4 py-3">
+      <span className={`w-7 h-7 rounded-full grid place-items-center text-xs font-bold shrink-0 ${esc?"bg-brand/15 text-brand ring-1 ring-brand/30":"bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/25"}`}>{esc?"!":"✓"}</span>
+      <span className="text-[12px] text-white/40 tnum w-14 shrink-0">{fmt(c.updated_at)}</span>
       <span className="flex-1 text-[14px] font-medium truncate">
-        {c.scenario_title}{c.cache_hit && <span className="text-brand ml-1" title="Served from library">⚡</span>}
+        {c.scenario_title}
+        {c.cache_hit && <span className="text-brand ml-1.5" title="Served from library — ~$0">⚡</span>}
       </span>
       <Badge level={c.complexity}/>
     </div>
@@ -142,14 +253,16 @@ function HistoryRow({ c }){
 }
 
 function Empty({ text }){
-  return <div className="text-white/35 text-sm py-6 px-4 border border-dashed border-white/15 rounded-2xl text-center">{text}</div>;
+  return <div className="text-white/35 text-sm py-8 px-4 border border-dashed border-white/12 rounded-2xl text-center">{text}</div>;
 }
 
-function Column({ title, count, children }){
+function Column({ title, count, accent, children }){
   return (
     <div>
-      <h2 className="text-[12px] uppercase tracking-[1.5px] text-white/40 mb-3 flex items-center gap-2">
-        {title}{count!=null && <span className="bg-white text-ink text-[11px] font-semibold rounded-full px-2 py-0.5 tnum">{count}</span>}
+      <h2 className="text-[12px] uppercase tracking-[1.6px] text-white/45 mb-3.5 flex items-center gap-2">
+        <span className={`w-1.5 h-1.5 rounded-full ${accent?"bg-brand":"bg-emerald-400"}`}></span>
+        {title}
+        {count!=null && <span className="bg-white/10 text-white/80 text-[11px] font-semibold rounded-full px-2 py-0.5 tnum ring-1 ring-white/10">{count}</span>}
       </h2>
       <div className="flex flex-col gap-3">{children}</div>
     </div>
@@ -193,21 +306,33 @@ function App(){
   return (
     <>
       <Header status={err?"paused":(data?.agent_status||"paused")} onDeploy={onDeploy} deployState={deployState}/>
-      <Metrics m={m}/>
-      <div className="max-w-[1200px] mx-auto px-6 pt-4 flex items-center gap-3 text-[11px] text-white/45">
-        <span className="uppercase tracking-[1.3px]">Severity</span>
-        <Badge level="low"/><span>agent auto-resolves</span>
-        <Badge level="medium"/><span>agent guides</span>
-        <Badge level="high"/><span>escalate to human</span>
+
+      <div className="max-w-[1200px] mx-auto px-6 pt-7">
+        <h1 className="text-[22px] font-bold tracking-tight">Resolution overview</h1>
+        <p className="text-white/45 text-[13.5px] mt-1">Every ticket triaged <b className="text-white/70">L1/L2/L3</b> by complexity, resolved or escalated in real time.</p>
       </div>
+
+      <Metrics m={m}/>
+
+      <div className="max-w-[1200px] mx-auto px-6 pt-5 flex flex-wrap items-center gap-x-3 gap-y-2 text-[11px] text-white/45">
+        <span className="uppercase tracking-[1.4px] text-white/35">Severity</span>
+        <span className="flex items-center gap-1.5"><Badge level="low"/> agent auto-resolves</span>
+        <span className="flex items-center gap-1.5"><Badge level="medium"/> agent guides</span>
+        <span className="flex items-center gap-1.5"><Badge level="high"/> escalate to human</span>
+      </div>
+
       <main className="max-w-[1200px] mx-auto px-6 py-6 grid md:grid-cols-2 gap-6 items-start">
-        <Column title="Live Activity" count={active.length}>
-          {active.length ? active.map(c=><ActiveCard key={c.call_id} c={c}/>) : <Empty text={err?"Can't reach the agent.":"No active calls right now."}/>}
+        <Column title="Live Activity" count={active.length} accent>
+          {active.length ? active.map((c,i)=><ActiveCard key={c.call_id} c={c} i={i}/>) : <Empty text={err?"Can't reach the agent.":"No active calls right now."}/>}
         </Column>
         <Column title="Resolved History">
-          {history.length ? history.map(c=><HistoryRow key={c.call_id} c={c}/>) : <Empty text="No resolved tickets yet."/>}
+          {history.length ? history.map((c,i)=><HistoryRow key={c.call_id} c={c} i={i}/>) : <Empty text="No resolved tickets yet."/>}
         </Column>
       </main>
+
+      <footer className="max-w-[1200px] mx-auto px-6 pb-10 text-[11px] text-white/25 flex items-center gap-2">
+        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Live · auto-refreshes every 2s
+      </footer>
     </>
   );
 }
