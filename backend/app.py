@@ -31,6 +31,11 @@ def metrics():
     return store.metrics()
 
 
+@app.get("/escalations")
+def escalations(limit: int = 20):
+    return {"items": store.list_escalations(limit=limit)}
+
+
 @app.websocket("/ws")
 async def ws(websocket: WebSocket):
     """Protocol (JSON messages from the widget):

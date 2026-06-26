@@ -68,6 +68,57 @@ def save_walkthrough(scenario_key: str, walkthrough: dict) -> str:
     return wid
 
 
+# ---------- human handoff / escalation queue ----------
+def create_escalation(call_id: str, scenario_key: str | None, transcript: list[str],
+                      reason: str, perception: dict | None = None) -> dict:
+    """Create the human handoff packet an IT specialist can pick up.
+
+    This is intentionally generic: a real Jira/ServiceNow connector can read the same
+    Redis ticket payload, while the demo can show the returned id immediately.
+    """
+    created = time.time()
+    seed = f"{call_id}:{created}:{scenario_key or 'unknown'}"
+    ticket_id = f"esc_{hashlib.sha1(seed.encode()).hexdigest()[:10]}"
+    scenario = get_scenario(scenario_key) if scenario_key else None
+    priority = "urgent" if (scenario or {}).get("risk") == "high" else "normal"
+    handoff = {
+        "id": ticket_id,
+        "status": "open",
+        "priority": priority,
+        "call_id": call_id,
+        "scenario_key": scenario_key,
+        "scenario_title": (scenario or {}).get("title"),
+        "reason": reason,
+        "created": created,
+        "perception": perception or {},
+        "summary": _handoff_summary(transcript, scenario, reason),
+        "transcript": transcript[-30:],
+    }
+    _r.set(f"escalation:{ticket_id}", json.dumps(handoff))
+    _r.lpush("escalations:open", ticket_id)
+    _r.incr("metric:escalated")
+    return handoff
+
+
+def list_escalations(limit: int = 20) -> list[dict]:
+    """Return recent open handoffs for an admin surface or demo check."""
+    ids = _r.lrange("escalations:open", 0, max(0, limit - 1))
+    tickets = []
+    for ticket_id in ids:
+        raw = _r.get(f"escalation:{ticket_id}")
+        if raw:
+            tickets.append(json.loads(raw))
+    return tickets
+
+
+def _handoff_summary(transcript: list[str], scenario: dict | None, reason: str) -> str:
+    user_lines = [line.removeprefix("User: ").strip()
+                  for line in transcript if line.startswith("User: ")]
+    latest = user_lines[-1] if user_lines else "No user description captured."
+    title = (scenario or {}).get("title") or "Unknown issue"
+    return f"{title}. Reason: {reason}. Latest user detail: {latest}"
+
+
 # ---------- dashboard metrics (the money shot) ----------
 COST_PER_TICKET = 20  # industry avg L1 resolution cost, USD
 
@@ -80,9 +131,11 @@ def record_deflection(cache_hit: bool):
 def metrics() -> dict:
     deflected = int(_r.get("metric:deflected") or 0)
     cache_hits = int(_r.get("metric:cache_hits") or 0)
+    escalated = int(_r.get("metric:escalated") or 0)
     return {
         "deflected": deflected,
         "cache_hits": cache_hits,
+        "escalated": escalated,
         "saved_usd": deflected * COST_PER_TICKET,
         "library_size": len(_r.keys("walkthrough:*")),
     }

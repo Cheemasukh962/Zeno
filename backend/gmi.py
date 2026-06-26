@@ -31,6 +31,7 @@ A real user gets confused and asks follow-up questions. When they do, STAY on th
 and re-explain - do not move on. Speak in 1-2 short, plain sentences.
 You are given: the current step, the conversation, and the latest screen reading. Decide THIS turn:
 - action say or clarify: answer a question or re-explain. advance is false.
+- action request_screenshot: ask for a screenshot. advance is false until one arrives.
 - action annotate: draw on their screenshot to point at the control. advance is false unless also done.
 - action resolve: the whole problem is now fixed.
 - action escalate: user is stuck after retries, or asking something off-script.
@@ -38,9 +39,18 @@ Set advance to true ONLY when the user or the screen reading confirms the CURREN
 actually done and you should move to the next one. Otherwise advance is false.
 Return STRICT JSON:
 {"say": "<what to speak>",
- "action": "say | clarify | annotate | resolve | escalate",
+ "action": "say | clarify | request_screenshot | annotate | resolve | escalate",
  "advance": <bool>,
  "annotate_target": "<label of the control to circle, or null>"}"""
+
+CONFIRMATION_PHRASES = (
+    "done", "did it", "finished", "it worked", "works now", "fixed", "all set",
+    "connected", "signed in", "logged in", "opened", "yes", "yeah", "yep",
+)
+BLOCKING_PHRASES = (
+    "not working", "doesn't work", "doesnt work", "can't", "cant", "cannot",
+    "failed", "still", "stuck", "error", "which", "where", "don't see", "dont see",
+)
 
 
 def diagnose(transcript: list[str], scenarios: list[dict]) -> dict:
@@ -79,13 +89,45 @@ def decide(step: dict, transcript: list[str], screen_reading: str | None) -> dic
         )
         return json.loads(resp.choices[0].message.content)
     except Exception as e:  # noqa: BLE001 - never let the call die mid-demo
-        # Degraded mode: speak the scripted line; advance unless this step waits for a screenshot.
         act = step.get("action", "say")
+        confirmed = _looks_confirmed(transcript, screen_reading)
+
+        if act == "request_screenshot":
+            if screen_reading:
+                return {"say": "Thanks, I can see your screen. Let's keep going.",
+                        "action": "say",
+                        "advance": True,
+                        "annotate_target": None,
+                        "_error": str(e)}
+            return {"say": step.get("say", "Can you send me a screenshot?"),
+                    "action": "request_screenshot",
+                    "advance": False,
+                    "annotate_target": None,
+                    "_error": str(e)}
+
+        if act in ("resolve", "resolved"):
+            return {"say": step.get("say", "You're all set."),
+                    "action": "resolve",
+                    "advance": False,
+                    "annotate_target": None,
+                    "_error": str(e)}
+
         return {"say": step.get("say", "Let me help with that."),
                 "action": act,
-                "advance": act not in ("request_screenshot",),
+                "advance": confirmed,
                 "annotate_target": step.get("annotate_target"),
                 "_error": str(e)}
+
+
+def _looks_confirmed(transcript: list[str], screen_reading: str | None) -> bool:
+    last_user = next((line for line in reversed(transcript)
+                      if line.startswith("User: ")), "")
+    text = f" {last_user} {screen_reading or ''} ".lower()
+    if not text.strip():
+        return False
+    if any(phrase in text for phrase in BLOCKING_PHRASES):
+        return False
+    return any(phrase in text for phrase in CONFIRMATION_PHRASES)
 
 
 def read_screen(image_bytes: bytes) -> str:
@@ -121,5 +163,13 @@ def summarize_steps(transcript: list[str], scenario_title: str) -> list[str]:
         )
         return json.loads(resp.choices[0].message.content).get("steps", [])
     except Exception:  # noqa: BLE001
-        return ["Open Finder / File Explorer", "Reconnect the network drive in the sidebar",
-                "Sign in when prompted", "Open the shared folder to confirm your files are back"]
+        title = scenario_title.lower()
+        if "vpn" in title:
+            return ["Open your VPN app and check the connection screen",
+                    "Sign out completely, then sign back in with your work account",
+                    "Select your company profile and press Connect",
+                    "If it still fails, toggle Wi-Fi off and on once, then retry"]
+        return ["Open Finder or File Explorer",
+                "Reconnect the network drive from the sidebar",
+                "Sign in when prompted using your usual work account",
+                "Open the shared folder to confirm your files are back"]

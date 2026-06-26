@@ -14,5 +14,11 @@ frontend/guides/*
 !frontend/shots/.gitkeep
 !frontend/guides/.gitkeep
 
+# Logs
+*.log
+
+# Admin dashboard (separate app, has its own repo/build)
+admin-dashboard/
+
 # OS
 .DS_Store

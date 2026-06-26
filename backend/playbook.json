@@ -58,12 +58,32 @@
     "steps": [
       {
         "id": "vpn_01",
-        "say": "Let's get your VPN back up. Open your VPN app, fully sign out, then sign back in with your work account. Tell me when you've done that.",
-        "action": "say"
+        "say": "Let's get your VPN back up. First, can you send me a screenshot of the VPN app or the error you're seeing?",
+        "action": "request_screenshot",
+        "expect": "a VPN app connection screen or error message"
       },
       {
         "id": "vpn_02",
-        "say": "Great. If it connects you're all set; if it still fails, toggle your Wi-Fi off and on once and try connecting again. Did it connect?",
+        "say": "Thanks, I can use that. Fully sign out of the VPN app, then sign back in with your work account. Tell me when you're back on the VPN screen.",
+        "action": "say",
+        "expect": "the user is signed back into the VPN app"
+      },
+      {
+        "id": "vpn_03",
+        "say": "Now choose your company VPN profile and press Connect. I've marked the usual Connect area on your screen.",
+        "action": "annotate",
+        "annotate_target": "vpn_connect_button",
+        "expect": "the VPN begins connecting"
+      },
+      {
+        "id": "vpn_04",
+        "say": "If it still fails, toggle Wi-Fi off and on once, wait ten seconds, then try Connect again. Did it connect this time?",
+        "action": "say",
+        "expect": "the VPN status shows connected"
+      },
+      {
+        "id": "vpn_05",
+        "say": "You're connected. I've turned the fix into a short guide you can keep for next time.",
         "action": "resolved"
       }
     ]
