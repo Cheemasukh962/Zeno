@@ -1,0 +1,26 @@
+{
+  "agent_status": "live",
+  "metrics": { "deflected": 12, "saved_usd": 240, "library_size": 5, "cache_hits": 7, "active": 2 },
+  "active": [
+    { "call_id": "3f2a", "started_at": 1782308535, "updated_at": 1782308582,
+      "status": "active", "scenario_title": "Reconnect your shared drive",
+      "step_idx": 2, "step_total": 5, "complexity": "medium", "cache_hit": false },
+    { "call_id": "9b1c", "started_at": 1782308510, "updated_at": 1782308560,
+      "status": "active", "scenario_title": "Reconnect your VPN",
+      "step_idx": 0, "step_total": 2, "complexity": "medium", "cache_hit": false }
+  ],
+  "history": [
+    { "call_id": "e8a0", "started_at": 1782308600, "updated_at": 1782308630,
+      "status": "resolved", "scenario_title": "Reconnect your shared drive",
+      "step_idx": 4, "step_total": 5, "complexity": "low", "cache_hit": true },
+    { "call_id": "7d4e", "started_at": 1782308280, "updated_at": 1782308340,
+      "status": "resolved", "scenario_title": "Reconnect your shared drive",
+      "step_idx": 4, "step_total": 5, "complexity": "medium", "cache_hit": false },
+    { "call_id": "c3f9", "started_at": 1782307200, "updated_at": 1782307320,
+      "status": "escalated", "scenario_title": "Possible account compromise",
+      "step_idx": 0, "step_total": 1, "complexity": "high", "cache_hit": false },
+    { "call_id": "1a2b", "started_at": 1782307860, "updated_at": 1782307930,
+      "status": "resolved", "scenario_title": "Reconnect your VPN",
+      "step_idx": 1, "step_total": 2, "complexity": "medium", "cache_hit": false }
+  ]
+}

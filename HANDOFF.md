@@ -97,3 +97,28 @@ python -m backend.triage_queue backend/data/tickets.json   # batch triage demo
 
 Status: perception layer is green end-to-end with real keys (brain, vision, voice round-trip, L1/L2/L3
 routing, cache money shot all pass). Build Phase 2 on top.
+
+---
+
+## One small ask for Phase 2: the `GET /admin/activity` endpoint (for the live dashboard)
+
+Teammate A built an **admin dashboard** (`frontend/admin.html`) that visualizes L1/L2/L3 live. It
+already works standalone (falls back to `frontend/sample-activity.json`) and will **go live with zero
+frontend changes** once you add this endpoint. Please add it during Phase 2 — it's additive (a new
+route in `app.py` + a small Redis history list in `store.py`; no changes to perception or the widget).
+
+```
+GET /admin/activity ->
+{ "agent_status": "live" | "paused",
+  "metrics": { "deflected", "saved_usd", "library_size", "cache_hits", "active" },   # store.metrics() + active count
+  "active":  [ { "call_id", "started_at", "updated_at", "status": "active",
+                 "scenario_title", "step_idx", "step_total", "complexity", "cache_hit" } ],
+  "history": [ { "call_id", "started_at", "updated_at", "status": "resolved" | "escalated",
+                 "scenario_title", "step_idx", "step_total", "complexity", "cache_hit" } ] }
+```
+- `complexity` = the perception **level**: send `1/2/3` or `"low"/"medium"/"high"` (the dashboard
+  accepts either; `1→low (auto)`, `2→medium (guided)`, `3→high (escalate)`).
+- `status`: `escalate` route → `"escalated"`; resolved → `"resolved"`; mid-guided → `"active"`.
+- **Source**: `active` from the live `state:{call_id}` keys in Redis (you already store `step_idx`,
+  `scenario`, `perception`); `history` from a new Redis list you append to on resolve/escalate.
+- `scenario_title` = `store.get_scenario(key)["title"]`; `step_total` = `len(scenario["steps"])`.

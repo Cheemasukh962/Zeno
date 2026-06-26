@@ -4,58 +4,253 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Tier Zero — IT help that talks</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+<!-- auth guard: any signed-in user (redirects to login otherwise) -->
+<script src="auth.js"></script>
+<script>(function(){ if (window.Zeno) Zeno.requireRole("any"); })();</script>
+
 <style>
-  :root{--red:#e63232;--ink:#1a1a1a;--mut:#6b6b6b;--line:#e6e6e6}
-  *{box-sizing:border-box}
-  body{font-family:system-ui,-apple-system,sans-serif;margin:0;color:var(--ink);background:#fafafa}
-  header{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
-  h1{font-size:18px;margin:0}
-  .metrics{font-size:13px;color:var(--mut);text-align:right}
-  .metrics b{color:var(--ink)}
-  main{max-width:760px;margin:0 auto;padding:20px;display:grid;grid-template-columns:1fr 1fr;gap:18px}
-  .panel{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px;min-height:120px}
-  .panel h2{font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--mut);margin:0 0 10px}
-  #log{grid-column:1 / -1;max-height:240px;overflow:auto}
-  .msg{margin:6px 0;font-size:15px;line-height:1.4}
-  .msg.u{color:var(--mut)} .msg.a{color:var(--ink);font-weight:500}
-  img.shot{width:100%;border-radius:8px;border:1px solid var(--line)}
-  .controls{grid-column:1 / -1;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-  button{font-size:15px;padding:11px 16px;border:0;border-radius:9px;cursor:pointer;background:var(--ink);color:#fff}
-  button.red{background:var(--red)} button.ghost{background:#fff;border:1px solid var(--line);color:var(--ink)}
-  input[type=text]{flex:1;min-width:200px;padding:11px;border:1px solid var(--line);border-radius:9px;font-size:15px}
-  #guide a{display:inline-block;margin-top:8px;color:var(--red);font-weight:600}
-  .pill{font-size:12px;background:#fdeaea;color:var(--red);padding:3px 9px;border-radius:20px;margin-left:8px}
+  :root{ --brand:#e8341f; --brandl:#ff6a4d; --brandd:#c01f0e; --ink:#0b0b0c; --mut:rgba(255,255,255,.45); --line:rgba(255,255,255,.10) }
+  *{ box-sizing:border-box; -webkit-font-smoothing:antialiased }
+  body{ font-family:'Inter',system-ui,-apple-system,sans-serif; margin:0; color:#fff; background:var(--ink); min-height:100vh; position:relative; overflow-x:hidden }
+  body::before{ content:""; position:fixed; inset:0; z-index:0; pointer-events:none;
+    background:radial-gradient(720px circle at 50% -12%, rgba(232,52,31,.20), transparent 55%),radial-gradient(900px circle at 110% 8%, rgba(255,106,77,.08), transparent 50%); }
+  body::after{ content:""; position:fixed; inset:0; z-index:0; pointer-events:none; opacity:.5;
+    background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);
+    background-size:46px 46px; -webkit-mask-image:radial-gradient(circle at 50% 0%,#000,transparent 75%); mask-image:radial-gradient(circle at 50% 0%,#000,transparent 75%); }
+  .wrap{ position:relative; z-index:1 }
+  .tnum{ font-variant-numeric:tabular-nums }
+
+  header{ position:sticky; top:0; z-index:20; backdrop-filter:blur(16px); background:rgba(11,11,12,.7); border-bottom:1px solid var(--line); }
+  .bar{ max-width:1060px; margin:0 auto; padding:13px 22px; display:flex; justify-content:space-between; align-items:center; gap:14px }
+  .brand{ display:flex; align-items:center; gap:11px }
+  .mark{ width:36px; height:36px; border-radius:11px; display:grid; place-items:center; font-weight:900; color:#fff;
+    background:linear-gradient(150deg,var(--brandl),var(--brandd)); box-shadow:0 8px 20px -6px rgba(232,52,31,.7) }
+  .brand .t{ font-weight:700; font-size:15px; letter-spacing:-.2px; line-height:1 }
+  .brand .s{ font-size:11px; color:var(--mut); margin-top:2px }
+  .right{ display:flex; align-items:center; gap:13px }
+  .gstat{ font-size:12px; color:var(--mut); text-align:right }
+  .gstat b{ color:#fff; font-weight:600 }
+  .pill{ font-size:11px; background:rgba(232,52,31,.14); color:#ff8a76; padding:4px 10px; border-radius:20px; margin-left:8px; border:1px solid rgba(232,52,31,.3); vertical-align:middle }
+  .acct{ display:flex; align-items:center; gap:9px; padding-left:12px; border-left:1px solid var(--line) }
+  .avatar{ width:32px; height:32px; border-radius:50%; display:grid; place-items:center; font-size:12px; font-weight:700; color:#fff; background:linear-gradient(150deg,var(--brandl),var(--brandd)) }
+  .acct .nm{ font-size:12.5px; color:rgba(255,255,255,.7); font-weight:500 }
+  .lnk{ font-size:12.5px; color:rgba(255,255,255,.6); text-decoration:none; padding:6px 10px; border-radius:9px; border:1px solid var(--line) }
+  .lnk:hover{ color:#fff; border-color:rgba(232,52,31,.45) }
+  .icon-btn{ background:transparent; border:1px solid var(--line); color:rgba(255,255,255,.7); border-radius:9px; padding:7px 10px; font-size:12.5px; cursor:pointer }
+  .icon-btn:hover{ color:#fff; border-color:rgba(232,52,31,.45) }
+
+  .page{ max-width:1060px; margin:0 auto; padding:22px }
+  .intro{ margin:4px 2px 0 }
+  .intro h1{ font-size:24px; font-weight:800; letter-spacing:-.5px; margin:0 }
+  .intro p{ color:var(--mut); font-size:13.5px; margin:6px 0 0 }
+
+  /* metric cards */
+  .cards{ display:grid; grid-template-columns:repeat(4,1fr); gap:13px; margin-top:18px }
+  .card{ background:rgba(255,255,255,.04); border:1px solid var(--line); border-radius:18px; padding:16px 18px;
+    backdrop-filter:blur(14px); box-shadow:inset 0 1px 0 rgba(255,255,255,.06), 0 24px 48px -28px rgba(0,0,0,.85);
+    transition:transform .2s, border-color .2s, box-shadow .2s }
+  .card:hover{ transform:translateY(-3px); border-color:rgba(232,52,31,.4); box-shadow:inset 0 1px 0 rgba(255,255,255,.08), 0 26px 56px -26px rgba(0,0,0,.9), 0 16px 44px -22px rgba(232,52,31,.3) }
+  .card.hero{ background:linear-gradient(150deg,#ff5a3c,var(--brand) 55%,var(--brandd)); border-color:rgba(255,255,255,.14); box-shadow:0 22px 54px -22px rgba(232,52,31,.6) }
+  .card .ico{ width:34px; height:34px; border-radius:10px; display:grid; place-items:center; background:rgba(232,52,31,.15); color:var(--brand); font-size:16px }
+  .card.hero .ico{ background:rgba(255,255,255,.2); color:#fff }
+  .card .num{ font-size:28px; font-weight:800; letter-spacing:-.5px; margin-top:11px }
+  .card .lbl{ font-size:10.5px; text-transform:uppercase; letter-spacing:1.3px; color:var(--mut); margin-top:5px }
+  .card.hero .lbl{ color:rgba(255,255,255,.85) }
+
+  .grid{ display:grid; grid-template-columns:1.45fr 1fr; gap:16px; margin-top:16px; align-items:start }
+  @media (max-width:880px){ .cards{ grid-template-columns:repeat(2,1fr) } .grid{ grid-template-columns:1fr } }
+  .col{ display:flex; flex-direction:column; gap:16px }
+  .panel{ background:rgba(255,255,255,.04); border:1px solid var(--line); border-radius:18px; padding:18px;
+    backdrop-filter:blur(14px); box-shadow:inset 0 1px 0 rgba(255,255,255,.06), 0 24px 48px -28px rgba(0,0,0,.85) }
+  .panel h2{ font-size:11px; text-transform:uppercase; letter-spacing:1.4px; color:var(--mut); margin:0 0 12px; display:flex; align-items:center; gap:8px }
+  .panel h2::before{ content:""; width:6px; height:6px; border-radius:50%; background:var(--brand) }
+  #log{ max-height:240px; overflow:auto }
+  .msg{ margin:7px 0; font-size:14.5px; line-height:1.5 }
+  .msg.u{ color:rgba(255,255,255,.5) } .msg.a{ color:#fff; font-weight:500 }
+  .placeholder{ color:rgba(255,255,255,.4); font-size:13.5px }
+  img.shot{ width:100%; border-radius:12px; border:1px solid var(--line) }
+  #guide b{ font-size:15px } #guide ol{ margin:10px 0 0; padding-left:20px; color:rgba(255,255,255,.85); font-size:14px; line-height:1.7 }
+  #guide a{ display:inline-block; margin-top:10px; color:var(--brandl); font-weight:600; text-decoration:none }
+
+  .controls{ display:flex; gap:10px; flex-wrap:wrap; align-items:center }
+  button{ font-size:14.5px; padding:12px 17px; border:0; border-radius:12px; cursor:pointer; font-weight:600; background:rgba(255,255,255,.10); color:#fff; transition:.18s; font-family:inherit }
+  button:hover{ filter:brightness(1.08) }
+  #micBtn{ background:linear-gradient(150deg,var(--brandl),var(--brandd)); box-shadow:0 12px 28px -12px rgba(232,52,31,.8) }
+  button.ghost{ background:rgba(255,255,255,.05); border:1px solid var(--line); color:#fff }
+  button.red{ background:linear-gradient(150deg,var(--brandl),var(--brandd))!important; box-shadow:0 0 0 3px rgba(232,52,31,.25) }
+  #sendBtn{ background:#fff; color:var(--ink) }
+  input[type=text], textarea, select{ width:100%; padding:11px 13px; border:1px solid var(--line); border-radius:12px; font-size:14px;
+    background:rgba(255,255,255,.04); color:#fff; outline:none; font-family:inherit }
+  input::placeholder, textarea::placeholder{ color:rgba(255,255,255,.35) }
+  input:focus, textarea:focus, select:focus{ border-color:rgba(232,52,31,.55); box-shadow:0 0 0 3px rgba(232,52,31,.16) }
+  textarea{ resize:vertical; min-height:64px }
+  select option{ background:#141417 }
+  .row{ display:flex; gap:10px } .row > *{ flex:1 }
+  .talkrow{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:12px }
+  .talkrow input[type=text]{ flex:1; min-width:160px; width:auto }
+
+  /* ticket list */
+  .tk{ display:flex; align-items:center; gap:10px; padding:11px 12px; border:1px solid var(--line); border-radius:13px; background:rgba(255,255,255,.02); margin-bottom:9px }
+  .tk .ic{ width:26px; height:26px; border-radius:50%; display:grid; place-items:center; font-size:12px; font-weight:700; flex-shrink:0 }
+  .tk.open .ic{ background:rgba(232,52,31,.15); color:var(--brand); border:1px solid rgba(232,52,31,.3) }
+  .tk.resolved .ic{ background:rgba(16,185,129,.15); color:#34d399; border:1px solid rgba(16,185,129,.25) }
+  .tk .body{ flex:1; min-width:0 }
+  .tk .sub{ font-size:13.5px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+  .tk .meta{ font-size:11px; color:var(--mut); margin-top:2px }
+  .tk .st{ font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.6px; padding:3px 8px; border-radius:20px; flex-shrink:0 }
+  .tk.open .st{ background:rgba(232,52,31,.14); color:#ff8a76 } .tk.resolved .st{ background:rgba(16,185,129,.14); color:#34d399 }
+
+  ::-webkit-scrollbar{ width:9px } ::-webkit-scrollbar-thumb{ background:#2a2a2e; border-radius:9px; border:2px solid var(--ink) }
 </style>
 </head>
 <body>
+<div class="wrap">
 <header>
-  <h1>Tier Zero <span class="pill" id="cachePill" style="display:none">served from library · ~$0</span></h1>
-  <div class="metrics">
-    Deflected <b id="mDef">0</b> · Saved <b id="mSaved">$0</b> · Library <b id="mLib">0</b>
+  <div class="bar">
+    <div class="brand">
+      <div class="mark">T</div>
+      <div><div class="t">Tier Zero <span class="pill" id="cachePill" style="display:none">served from library · ~$0</span></div>
+        <div class="s">IT help that talks</div></div>
+    </div>
+    <div class="right">
+      <div class="gstat">Network · Deflected <b id="mDef">0</b> · Saved <b id="mSaved">$0</b> · Library <b id="mLib">0</b></div>
+      <a class="lnk" id="dashLink" href="admin.html" style="display:none">Dashboard ↗</a>
+      <div class="acct">
+        <div class="avatar" id="acctAvatar">?</div>
+        <span class="nm" id="acctName">…</span>
+        <button class="icon-btn" id="logoutBtn">Sign out</button>
+      </div>
+    </div>
   </div>
 </header>
 
-<main>
-  <div class="panel" id="log"><h2>Conversation</h2><div id="msgs"></div></div>
-
-  <div class="panel">
-    <h2>What the agent showed you</h2>
-    <div id="shotWrap"><p style="color:var(--mut);font-size:14px">Annotated screenshots appear here.</p></div>
+<div class="page">
+  <div class="intro">
+    <h1>Welcome back, <span id="heroName">there</span> 👋</h1>
+    <p>Raise a ticket or just talk to the agent — it triages every problem and fixes the easy ones instantly.</p>
   </div>
 
-  <div class="panel">
-    <h2>Your walkthrough</h2>
-    <div id="guide"><p style="color:var(--mut);font-size:14px">A keepable guide appears once we fix it.</p></div>
-  </div>
+  <!-- user metrics -->
+  <section class="cards">
+    <div class="card"><div class="ico">🎫</div><div class="num tnum" id="uRaised">0</div><div class="lbl">Tickets raised</div></div>
+    <div class="card hero"><div class="ico">✓</div><div class="num tnum" id="uResolved">0</div><div class="lbl">Problems solved</div></div>
+    <div class="card"><div class="ico">⏳</div><div class="num tnum" id="uOpen">0</div><div class="lbl">Open right now</div></div>
+    <div class="card"><div class="ico">💸</div><div class="num tnum" id="uSaved">$0</div><div class="lbl">Est. time saved</div></div>
+  </section>
 
-  <div class="controls">
-    <button class="red" id="micBtn">🎤 Hold to talk</button>
-    <button class="ghost" id="shotBtn">📷 Send screenshot</button>
-    <input type="file" id="file" accept="image/*" hidden/>
-    <input type="text" id="txt" placeholder="…or type what's wrong"/>
-    <button id="sendBtn">Send</button>
+  <div class="grid">
+    <!-- left: the assistant -->
+    <div class="col">
+      <div class="panel"><h2>Conversation</h2><div id="log"><div id="msgs"></div></div>
+        <div class="talkrow">
+          <button class="red" id="micBtn">🎤 Hold to talk</button>
+          <button class="ghost" id="shotBtn">📷 Send screenshot</button>
+          <input type="file" id="file" accept="image/*" hidden/>
+          <input type="text" id="txt" placeholder="…or type what's wrong"/>
+          <button id="sendBtn">Send</button>
+        </div>
+      </div>
+      <div class="panel"><h2>What the agent showed you</h2>
+        <div id="shotWrap"><p class="placeholder">Annotated screenshots appear here.</p></div></div>
+      <div class="panel"><h2>Your walkthrough</h2>
+        <div id="guide"><p class="placeholder">A keepable guide appears once we fix it.</p></div></div>
+    </div>
+
+    <!-- right: tickets -->
+    <div class="col">
+      <div class="panel"><h2>Raise a ticket</h2>
+        <form id="ticketForm" autocomplete="off">
+          <input type="text" id="tkSubject" placeholder="What's the problem? (e.g. shared drive won't open)" style="margin-bottom:10px"/>
+          <textarea id="tkDetail" placeholder="Add any details (optional)" style="margin-bottom:10px"></textarea>
+          <div class="row" style="margin-bottom:12px">
+            <select id="tkCat">
+              <option value="">Category…</option>
+              <option>Shared drive / files</option>
+              <option>VPN / network</option>
+              <option>Account / security</option>
+              <option>Other</option>
+            </select>
+            <button type="submit" id="tkSubmit" style="flex:0 0 auto;background:linear-gradient(150deg,var(--brandl),var(--brandd));box-shadow:0 12px 28px -12px rgba(232,52,31,.8)">Raise ticket →</button>
+          </div>
+        </form>
+        <p class="placeholder" style="font-size:12px;margin:0">Raising a ticket starts a live chat with the agent.</p>
+      </div>
+
+      <div class="panel"><h2>My tickets <span id="tkCount" style="color:rgba(255,255,255,.4);font-weight:600">0</span></h2>
+        <div id="ticketList"><p class="placeholder">No tickets yet — raise your first one.</p></div>
+      </div>
+    </div>
   </div>
-</main>
+</div>
+</div>
+
+<!-- account + tickets (client-side, per user) -->
+<script>
+  const SESS = (window.Zeno && Zeno.session()) || {name:"Guest", role:"user", email:"guest"};
+  document.getElementById('acctName').textContent = SESS.name;
+  document.getElementById('acctAvatar').textContent = Zeno.initials(SESS.name);
+  document.getElementById('heroName').textContent = (SESS.name||"there").split(" ")[0];
+  document.getElementById('logoutBtn').onclick = ()=> Zeno.logout();
+  if (SESS.role === "admin") document.getElementById('dashLink').style.display = "inline-block";
+
+  const TK_KEY = "zeno_tickets_" + (SESS.email || "guest");
+  const loadTk = ()=>{ try{ return JSON.parse(localStorage.getItem(TK_KEY))||[] }catch(e){ return [] } };
+  const saveTk = (a)=> localStorage.setItem(TK_KEY, JSON.stringify(a));
+  const ago = (t)=>{ const s=(Date.now()-t)/1000; if(s<60)return"just now"; if(s<3600)return Math.floor(s/60)+"m ago"; if(s<86400)return Math.floor(s/3600)+"h ago"; return Math.floor(s/86400)+"d ago"; };
+
+  function renderUserMetrics(){
+    const t = loadTk();
+    const resolved = t.filter(x=>x.status==="resolved").length;
+    document.getElementById('uRaised').textContent   = t.length;
+    document.getElementById('uResolved').textContent = resolved;
+    document.getElementById('uOpen').textContent     = t.length - resolved;
+    document.getElementById('uSaved').textContent    = "$" + (resolved*20);
+  }
+  function renderTickets(){
+    const t = loadTk(); const box = document.getElementById('ticketList');
+    document.getElementById('tkCount').textContent = t.length;
+    if(!t.length){ box.innerHTML = '<p class="placeholder">No tickets yet — raise your first one.</p>'; return; }
+    box.innerHTML = t.slice().reverse().map(x=>{
+      const r = x.status==="resolved";
+      return `<div class="tk ${r?'resolved':'open'}">
+        <span class="ic">${r?'✓':'!'}</span>
+        <div class="body"><div class="sub">${escapeHtml(x.subject)}</div>
+          <div class="meta">${x.cat?escapeHtml(x.cat)+' · ':''}${ago(x.created)}</div></div>
+        <span class="st">${r?'Resolved':'Open'}</span></div>`;
+    }).join("");
+  }
+  function escapeHtml(s){ return (s||"").replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+  function addTicket(subject, detail, cat){
+    const t = loadTk();
+    t.push({ id:"tk_"+Date.now().toString(36), subject, detail:detail||"", cat:cat||"", status:"open", created:Date.now() });
+    saveTk(t); renderTickets(); renderUserMetrics();
+  }
+  // mark the most recent OPEN ticket resolved (called when the agent resolves a problem)
+  window.resolveLatestTicket = function(){
+    const t = loadTk();
+    for(let i=t.length-1;i>=0;i--){ if(t[i].status==="open"){ t[i].status="resolved"; t[i].resolvedAt=Date.now(); break; } }
+    saveTk(t); renderTickets(); renderUserMetrics();
+  };
+
+  document.getElementById('ticketForm').addEventListener('submit', (e)=>{
+    e.preventDefault();
+    const sub = document.getElementById('tkSubject').value.trim(); if(!sub) return;
+    const det = document.getElementById('tkDetail').value.trim();
+    const cat = document.getElementById('tkCat').value;
+    addTicket(sub, det, cat);
+    // kick off the conversation with the agent
+    const line = sub + (det? (". " + det) : "");
+    addMsg('u', line); send({type:'text', text: line});
+    e.target.reset();
+  });
+
+  renderTickets(); renderUserMetrics();
+</script>
 
 <script>
 const WS_URL = (location.protocol==='https:'?'wss://':'ws://') + (location.host || 'localhost:8000') + '/ws';
@@ -73,6 +268,7 @@ function connect(){
     if(r.request_screenshot) flashShotBtn();
     if(r.walkthrough) showGuide(r.walkthrough);
     if(r.cache_hit) document.getElementById('cachePill').style.display='inline-block';
+    if((r.walkthrough || r.cache_hit) && window.resolveLatestTicket) resolveLatestTicket();  // ticket solved
     if(r.metrics) updateMetrics(r.metrics);
   };
   ws.onclose = ()=> setTimeout(connect, 1000);
