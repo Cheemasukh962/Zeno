@@ -1,0 +1,38 @@
+{
+  "shared_drive_not_opening": {
+    "symptom": "files won't open from the shared or network drive",
+    "match_phrases": ["shared drive", "network drive", "files won't open", "can't open files", "folder is gone"],
+    "title": "Reconnect your shared drive",
+    "steps": [
+      {
+        "id": "drive_01",
+        "say": "No problem, we'll get you back in before your meeting. First, can you send me a screenshot of what's on your screen right now?",
+        "action": "request_screenshot",
+        "expect": "a file explorer or finder window"
+      },
+      {
+        "id": "drive_02",
+        "say": "Thanks, I can see it. Your network drive isn't mounted, that's why the files are missing. Open Finder (or File Explorer) and look in the left sidebar.",
+        "action": "say",
+        "annotate_target": "sidebar"
+      },
+      {
+        "id": "drive_03",
+        "say": "Tap the button I've circled to reconnect, then enter your usual sign-in when it asks. I won't see your password, you type it yourself.",
+        "action": "annotate",
+        "annotate_target": "connect_button"
+      },
+      {
+        "id": "drive_04",
+        "say": "You should see the shared folder appear now. Can you open it and confirm your files are back?",
+        "action": "request_screenshot",
+        "expect": "the mounted drive with files visible"
+      },
+      {
+        "id": "drive_05",
+        "say": "You're all set. I've turned this into a short guide you can keep, so next time you can fix it in seconds without calling.",
+        "action": "resolved"
+      }
+    ]
+  }
+}

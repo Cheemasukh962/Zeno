@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Tier Zero — IT help that talks</title>
+<style>
+  :root{--red:#e63232;--ink:#1a1a1a;--mut:#6b6b6b;--line:#e6e6e6}
+  *{box-sizing:border-box}
+  body{font-family:system-ui,-apple-system,sans-serif;margin:0;color:var(--ink);background:#fafafa}
+  header{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+  h1{font-size:18px;margin:0}
+  .metrics{font-size:13px;color:var(--mut);text-align:right}
+  .metrics b{color:var(--ink)}
+  main{max-width:760px;margin:0 auto;padding:20px;display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .panel{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px;min-height:120px}
+  .panel h2{font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--mut);margin:0 0 10px}
+  #log{grid-column:1 / -1;max-height:240px;overflow:auto}
+  .msg{margin:6px 0;font-size:15px;line-height:1.4}
+  .msg.u{color:var(--mut)} .msg.a{color:var(--ink);font-weight:500}
+  img.shot{width:100%;border-radius:8px;border:1px solid var(--line)}
+  .controls{grid-column:1 / -1;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  button{font-size:15px;padding:11px 16px;border:0;border-radius:9px;cursor:pointer;background:var(--ink);color:#fff}
+  button.red{background:var(--red)} button.ghost{background:#fff;border:1px solid var(--line);color:var(--ink)}
+  input[type=text]{flex:1;min-width:200px;padding:11px;border:1px solid var(--line);border-radius:9px;font-size:15px}
+  #guide a{display:inline-block;margin-top:8px;color:var(--red);font-weight:600}
+  .pill{font-size:12px;background:#fdeaea;color:var(--red);padding:3px 9px;border-radius:20px;margin-left:8px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Tier Zero <span class="pill" id="cachePill" style="display:none">served from library · ~$0</span></h1>
+  <div class="metrics">
+    Deflected <b id="mDef">0</b> · Saved <b id="mSaved">$0</b> · Library <b id="mLib">0</b>
+  </div>
+</header>
+
+<main>
+  <div class="panel" id="log"><h2>Conversation</h2><div id="msgs"></div></div>
+
+  <div class="panel">
+    <h2>What the agent showed you</h2>
+    <div id="shotWrap"><p style="color:var(--mut);font-size:14px">Annotated screenshots appear here.</p></div>
+  </div>
+
+  <div class="panel">
+    <h2>Your walkthrough</h2>
+    <div id="guide"><p style="color:var(--mut);font-size:14px">A keepable guide appears once we fix it.</p></div>
+  </div>
+
+  <div class="controls">
+    <button class="red" id="micBtn">🎤 Hold to talk</button>
+    <button class="ghost" id="shotBtn">📷 Send screenshot</button>
+    <input type="file" id="file" accept="image/*" hidden/>
+    <input type="text" id="txt" placeholder="…or type what's wrong"/>
+    <button id="sendBtn">Send</button>
+  </div>
+</main>
+
+<script>
+const WS_URL = (location.protocol==='https:'?'wss://':'ws://') + (location.host || 'localhost:8000') + '/ws';
+let ws, mediaRec, chunks=[];
+
+function connect(){
+  ws = new WebSocket(WS_URL);
+  ws.binaryType='arraybuffer';
+  ws.onmessage = (e)=>{
+    if(typeof e.data!=='string'){ playAudio(e.data); return; }   // TTS audio
+    const r = JSON.parse(e.data);
+    if(r.transcribed) addMsg('u', r.transcribed);
+    if(r.say) addMsg('a', r.say);
+    if(r.annotated_url) showShot(r.annotated_url);
+    if(r.request_screenshot) flashShotBtn();
+    if(r.walkthrough) showGuide(r.walkthrough);
+    if(r.cache_hit) document.getElementById('cachePill').style.display='inline-block';
+    if(r.metrics) updateMetrics(r.metrics);
+  };
+  ws.onclose = ()=> setTimeout(connect, 1000);
+}
+connect();
+
+function send(obj){ ws && ws.readyState===1 && ws.send(JSON.stringify(obj)); }
+function addMsg(who,t){ const d=document.createElement('div'); d.className='msg '+who;
+  d.textContent=(who==='u'?'You: ':'Agent: ')+t; const m=document.getElementById('msgs');
+  m.appendChild(d); m.parentElement.scrollTop=m.parentElement.scrollHeight; }
+function showShot(url){ document.getElementById('shotWrap').innerHTML='<img class="shot" src="'+url+'"/>'; }
+function flashShotBtn(){ const b=document.getElementById('shotBtn'); b.classList.add('red');
+  setTimeout(()=>b.classList.remove('red'),2500); }
+function showGuide(w){ let h='<b>'+w.title+'</b><ol>';
+  (w.steps||[]).forEach(s=> h+='<li>'+(s.text||s)+'</li>'); h+='</ol>';
+  if(w.html_url) h+='<a href="'+w.html_url+'" target="_blank">Open your full guide ↗</a>';
+  document.getElementById('guide').innerHTML=h; }
+function updateMetrics(m){ document.getElementById('mDef').textContent=m.deflected;
+  document.getElementById('mSaved').textContent='$'+m.saved_usd;
+  document.getElementById('mLib').textContent=m.library_size; }
+function playAudio(buf){ const blob=new Blob([buf],{type:'audio/mp3'});
+  new Audio(URL.createObjectURL(blob)).play().catch(()=>{}); }
+
+// typed input
+document.getElementById('sendBtn').onclick = ()=>{
+  const t=document.getElementById('txt').value.trim(); if(!t) return;
+  addMsg('u',t); send({type:'text', text:t}); document.getElementById('txt').value='';
+};
+
+// screenshot upload
+document.getElementById('shotBtn').onclick = ()=> document.getElementById('file').click();
+document.getElementById('file').onchange = (e)=>{
+  const f=e.target.files[0]; if(!f) return;
+  const rd=new FileReader();
+  rd.onload=()=> send({type:'image', image: rd.result.split(',')[1]});
+  rd.readAsDataURL(f);
+};
+
+// push-to-talk (MediaRecorder -> base64 -> Deepgram STT server-side)
+const micBtn=document.getElementById('micBtn');
+async function startRec(){
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+    mediaRec=new MediaRecorder(stream); chunks=[];
+    mediaRec.ondataavailable=e=>chunks.push(e.data);
+    mediaRec.onstop=()=>{ const b=new Blob(chunks,{type:'audio/webm'});
+      const rd=new FileReader(); rd.onload=()=> send({type:'audio', audio: rd.result.split(',')[1]});
+      rd.readAsDataURL(b); };
+    mediaRec.start(); micBtn.textContent='● Recording…';
+  }catch(err){ alert('Mic blocked — use the text box instead.'); }
+}
+function stopRec(){ if(mediaRec && mediaRec.state!=='inactive'){ mediaRec.stop();
+  micBtn.textContent='🎤 Hold to talk'; } }
+micBtn.onmousedown=startRec; micBtn.onmouseup=stopRec; micBtn.onmouseleave=stopRec;
+micBtn.ontouchstart=(e)=>{e.preventDefault();startRec();};
+micBtn.ontouchend=(e)=>{e.preventDefault();stopRec();};
+</script>
+</body>
+</html>
