@@ -35,11 +35,19 @@ def synthesize(text: str) -> bytes | None:
     try:
         from deepgram import SpeakOptions
         opts = SpeakOptions(model=_TTS_MODEL)
-        # SDK writes to a path; capture into memory via a temp buffer.
+        # SDK writes to a path; use a closed temp file so it works on Windows too
+        # (an open NamedTemporaryFile is locked there -> PermissionError).
         import tempfile
-        with tempfile.NamedTemporaryFile(suffix=".mp3", delete=True) as f:
-            _dg.speak.rest.v("1").save(f.name, {"text": text}, opts)
-            f.seek(0)
-            return f.read()
+        fd, path = tempfile.mkstemp(suffix=".mp3")
+        os.close(fd)
+        try:
+            _dg.speak.rest.v("1").save(path, {"text": text}, opts)
+            with open(path, "rb") as f:
+                return f.read()
+        finally:
+            try:
+                os.remove(path)
+            except OSError:
+                pass
     except Exception:  # noqa: BLE001
         return None

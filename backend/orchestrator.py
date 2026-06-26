@@ -3,9 +3,12 @@
   2. GUIDED STEPS — walk the vetted playbook, staying on a step for follow-ups and
      advancing ONLY when the user/screenshot confirms the step is done.
 Ties together brain, vision, annotator, walkthrough, and Redis."""
-from . import annotator, deepgram_client, gmi, store, walkthrough
+from dataclasses import asdict
+
+from . import annotator, deepgram_client, gmi, perception, store, walkthrough
 
 RESOLVE_ACTIONS = {"resolve", "resolved"}
+MAX_INTAKE_ATTEMPTS = 2  # after this many tries with no identifiable issue → escalate (L3)
 
 
 def handle_turn(call_id: str, user_text: str, image_bytes: bytes | None) -> dict:
@@ -13,36 +16,51 @@ def handle_turn(call_id: str, user_text: str, image_bytes: bytes | None) -> dict
     if user_text:
         state["transcript"].append(f"User: {user_text}")
 
-    # ---------- PHASE 1: intake / diagnose (runs until a scenario is locked) ----------
+    # ---------- PHASE 1: perception — retrieve + classify (L1/L2/L3), then route ----------
     if not state.get("locked"):
-        scenarios = store.list_scenarios()
-        keys = {s["key"] for s in scenarios}
-        dec = gmi.diagnose(state["transcript"], scenarios)
-        key = dec.get("scenario_key")
+        p = perception.perceive(state["transcript"], source="live")
 
-        if dec.get("_error"):  # brain down → fall back to keyword matching
-            kw, _ = store.match_playbook(" ".join(state["transcript"]))
-            if kw:
-                key, dec = kw, {"scenario_locked": True}
+        if not p.locked:
+            state["intake_attempts"] = state.get("intake_attempts", 0) + 1
+            # An unidentifiable problem (L3) that we still can't place after a couple of
+            # tries → stop looping and escalate to a human. A known-but-unconfirmed issue
+            # (route != escalate) keeps clarifying.
+            if p.route == "escalate" and state["intake_attempts"] >= MAX_INTAKE_ATTEMPTS:
+                state["locked"] = True
+                state["perception"] = asdict(p)
+                store.save_state(state)
+                return _resp(state, action="escalate",
+                             say="I'm not able to place this one — let me hand you to a "
+                             "human with everything you've told me so far.")
+            # still vague → ask one clarifying question and stay in intake
+            store.save_state(state)
+            return _resp(state, action="clarify",
+                         say=p.say or "Tell me a bit more about what's "
+                         "happening and I'll walk you through it.")
 
-        if dec.get("scenario_locked") and key in keys:
-            state["scenario"] = key
-            state["locked"] = True
-            # MONEY SHOT: if we've solved this before, serve the real guide instantly (~$0).
-            cached = store.find_cached_walkthrough(key)
+        state["scenario"] = p.scenario_key
+        state["locked"] = True
+        state["perception"] = asdict(p)  # persist the classification for routing + dashboard
+
+        if p.route == "escalate":
+            # L3 → hand to a human. The orchestration teammate fills in the real hand-off.
+            store.save_state(state)
+            return _resp(state, action="escalate",
+                         say=p.say or "This one needs a human — I'm handing it over with "
+                         "your details so you don't have to repeat yourself.")
+
+        if p.route == "auto_resolve":
+            # L1 MONEY SHOT: if we've solved this before, serve the real guide instantly (~$0).
+            cached = store.find_cached_walkthrough(p.scenario_key)
             if cached:
                 store.record_deflection(cache_hit=True)
                 store.save_state(state)
                 return _resp(state, say="I've seen this exact issue before — here's the "
                              "guide that fixed it, ready to go.", cache_hit=True,
                              walkthrough=cached)
-            # otherwise fall through and deliver the first guided step this same turn
-        else:
-            # still vague → ask one clarifying question and stay in intake
-            store.save_state(state)
-            return _resp(state, action="clarify",
-                         say=dec.get("say") or "Tell me a bit more about what's "
-                         "happening and I'll walk you through it.")
+            # cache miss → fall through and deliver the first guided step this same turn
+
+        # route == "guided" (or auto_resolve cache-miss) → fall through to Phase 2
 
     # ---------- PHASE 2: guided steps (scenario locked) ----------
     scenario = store.get_scenario(state["scenario"])

@@ -1,7 +1,8 @@
 {
   "shared_drive_not_opening": {
     "symptom": "files won't open from the shared or network drive",
-    "match_phrases": ["shared drive", "network drive", "files won't open", "can't open files", "folder is gone"],
+    "match_phrases": ["shared drive", "network drive", "shared folder", "network folder", "mapped drive", "won't open", "wont open", "can't open", "cant open", "cannot open", "files won't open", "can't open files", "files are gone", "folder is gone", "drive is gone", "can't access", "cant access", "not mounted", "drive disconnected", "drive not connecting"],
+    "keywords": ["drive", "folder", "files", "share", "shared", "network", "mount", "mounted", "mapped", "reconnect", "disconnected"],
     "title": "Reconnect your shared drive",
     "steps": [
       {
@@ -31,6 +32,38 @@
       {
         "id": "drive_05",
         "say": "You're all set. I've turned this into a short guide you can keep, so next time you can fix it in seconds without calling.",
+        "action": "resolved"
+      }
+    ]
+  },
+  "account_compromised": {
+    "symptom": "account may be hacked, suspicious sign-in, or password changed without you",
+    "match_phrases": ["hacked", "got hacked", "suspicious login", "suspicious sign in", "didn't sign in", "didnt sign in", "i didn't log in", "password changed", "changed my password", "account locked", "locked out of my account", "someone in my account", "someone accessed my account", "phishing", "phishing email"],
+    "keywords": ["hacked", "suspicious", "phishing", "compromised", "breach", "password", "stolen", "unauthorized"],
+    "risk": "high",
+    "title": "Possible account compromise",
+    "steps": [
+      {
+        "id": "sec_01",
+        "say": "This could be a security issue, so I'm going to connect you with a human specialist right away who can secure your account safely.",
+        "action": "escalate"
+      }
+    ]
+  },
+  "vpn_not_connecting": {
+    "symptom": "the VPN won't connect or remote access is failing",
+    "match_phrases": ["vpn", "can't connect to vpn", "cant connect to vpn", "vpn won't connect", "vpn wont connect", "no vpn", "vpn is down", "remote access", "can't reach the network", "cant reach the network", "work from home connection"],
+    "keywords": ["vpn", "remote", "connect", "connection", "network", "tunnel"],
+    "title": "Reconnect your VPN",
+    "steps": [
+      {
+        "id": "vpn_01",
+        "say": "Let's get your VPN back up. Open your VPN app, fully sign out, then sign back in with your work account. Tell me when you've done that.",
+        "action": "say"
+      },
+      {
+        "id": "vpn_02",
+        "say": "Great. If it connects you're all set; if it still fails, toggle your Wi-Fi off and on once and try connecting again. Did it connect?",
         "action": "resolved"
       }
     ]

@@ -1,0 +1,10 @@
+[
+  {"id": "T-1001", "user": "rita", "channel": "email",
+   "text": "I can't open any files from the shared network drive and I have a meeting in 10 minutes"},
+  {"id": "T-1002", "user": "sam", "channel": "slack",
+   "text": "the shared drive folder is gone, files won't open"},
+  {"id": "T-1003", "user": "devon", "channel": "email",
+   "text": "my entire team is locked out of the network drive, the whole department is down"},
+  {"id": "T-1004", "user": "priya", "channel": "web",
+   "text": "my laptop fan is making a weird grinding noise sometimes"}
+]
