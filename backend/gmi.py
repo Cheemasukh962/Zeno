@@ -6,9 +6,12 @@ import os
 
 from openai import OpenAI
 
+# Works both locally (GMI_API_KEY/GMI_BASE_URL from .env) and on AgentBox, which
+# auto-injects GMI_MAAS_API_KEY / GMI_MAAS_BASE_URL at runtime.
 _client = OpenAI(
-    api_key=os.getenv("GMI_API_KEY", "missing"),
-    base_url=os.getenv("GMI_BASE_URL", "https://api.gmi-serving.com/v1"),
+    api_key=os.getenv("GMI_API_KEY") or os.getenv("GMI_MAAS_API_KEY") or "missing",
+    base_url=(os.getenv("GMI_BASE_URL") or os.getenv("GMI_MAAS_BASE_URL")
+              or "https://api.gmi-serving.com/v1"),
 )
 BRAIN = os.getenv("GMI_BRAIN_MODEL", "google/gemini-3-flash-preview")
 VISION = os.getenv("GMI_VISION_MODEL", "google/gemini-3-flash-preview")

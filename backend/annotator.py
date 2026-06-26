@@ -12,7 +12,10 @@ from PIL import Image, ImageDraw
 
 OUT = Path(__file__).parent.parent / "frontend" / "shots"
 OUT.mkdir(parents=True, exist_ok=True)
-PUBLIC = os.getenv("PUBLIC_BASE_URL", "http://localhost:8000")
+# Empty default -> relative "/shots/..." URLs that resolve against whatever origin
+# serves the page (localhost or the AgentBox domain). Set PUBLIC_BASE_URL only if the
+# images must be referenced from a different host than the UI.
+PUBLIC = os.getenv("PUBLIC_BASE_URL", "")
 
 # Hardcoded demo targets as fractions of (width, height): (x, y, w, h).
 # Swap to real coordinates from the vision model later if you have time.
