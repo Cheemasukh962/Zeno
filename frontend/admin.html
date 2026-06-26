@@ -30,17 +30,26 @@
 
 <script type="text/babel">
 const { useState, useEffect } = React;
-const SOURCE = "sample-activity.json";   // → "/admin/activity" when the endpoint is live
+const LIVE_SOURCE = "/admin/activity";       // real backend endpoint (added in Phase 2)
+const MOCK_SOURCE = "sample-activity.json";  // fallback so the dashboard renders standalone
 const POLL_MS = 2000;
 const fmt = (e)=> new Date(e*1000).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit",second:"2-digit"});
 
+// Normalize whatever the feed sends (perception level 1/2/3, route, or low/med/high)
+// into a single tier word. Tier == the L1/L2/L3 complexity from the classifier.
+const TIER = { low:"low", medium:"medium", high:"high",
+  1:"low", 2:"medium", 3:"high", "1":"low", "2":"medium", "3":"high",
+  auto_resolve:"low", guided:"medium", escalate:"high" };
+const LABEL = { low:"L1 · low", medium:"L2 · medium", high:"L3 · high" };
+
 function Badge({ level }){
+  const t = TIER[level] || "low";
   const map = {
     low:    "bg-zinc-100 text-zinc-500",
     medium: "bg-zinc-900 text-white",
     high:   "bg-brand text-white",
   };
-  return <span className={`text-[10px] font-bold tracking-wider uppercase px-2.5 py-1 rounded-full ${map[level]||map.low}`}>{level}</span>;
+  return <span className={`text-[10px] font-bold tracking-wider uppercase px-2.5 py-1 rounded-full ${map[t]}`}>{LABEL[t]}</span>;
 }
 
 function LiveDot(){
@@ -154,8 +163,17 @@ function App(){
 
   useEffect(()=>{
     let on = true;
+    // Try the live endpoint first; fall back to the bundled mock so the dashboard
+    // always renders. When the backend ships /admin/activity, this goes live untouched.
+    const fetchJson = async (url)=>{
+      const r = await fetch(url, {cache:"no-store"});
+      if(!r.ok) throw new Error(r.status);
+      return r.json();
+    };
     const poll = async ()=>{
-      try { const d = await (await fetch(SOURCE,{cache:"no-store"})).json(); if(on){ setData(d); setErr(false); } }
+      try { const d = await fetchJson(LIVE_SOURCE); if(on){ setData(d); setErr(false); } return; }
+      catch(e){ /* endpoint not live yet -> fall back to mock */ }
+      try { const d = await fetchJson(MOCK_SOURCE); if(on){ setData(d); setErr(false); } }
       catch(e){ if(on) setErr(true); }
     };
     poll(); const id = setInterval(poll, POLL_MS);
@@ -176,6 +194,12 @@ function App(){
     <>
       <Header status={err?"paused":(data?.agent_status||"paused")} onDeploy={onDeploy} deployState={deployState}/>
       <Metrics m={m}/>
+      <div className="max-w-[1200px] mx-auto px-6 pt-4 flex items-center gap-3 text-[11px] text-white/45">
+        <span className="uppercase tracking-[1.3px]">Severity</span>
+        <Badge level="low"/><span>agent auto-resolves</span>
+        <Badge level="medium"/><span>agent guides</span>
+        <Badge level="high"/><span>escalate to human</span>
+      </div>
       <main className="max-w-[1200px] mx-auto px-6 py-6 grid md:grid-cols-2 gap-6 items-start">
         <Column title="Live Activity" count={active.length}>
           {active.length ? active.map(c=><ActiveCard key={c.call_id} c={c}/>) : <Empty text={err?"Can't reach the agent.":"No active calls right now."}/>}
