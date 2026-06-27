@@ -220,9 +220,17 @@
         <span class="ic">${r?'✓':'!'}</span>
         <div class="body"><div class="sub">${escapeHtml(x.subject)}</div>
           <div class="meta">${x.cat?escapeHtml(x.cat)+' · ':''}${ago(x.created)}</div></div>
-        <span class="st">${r?'Resolved':'Open'}</span></div>`;
+        ${r ? '<span class="st">Resolved</span>'
+            : `<button class="tkdone" data-id="${x.id}" style="background:rgba(232,52,31,.12);border:1px solid rgba(232,52,31,.35);color:#ff8a72;font:inherit;font-size:12px;font-weight:600;padding:5px 10px;border-radius:8px;cursor:pointer">Mark done ✓</button>`}
+      </div>`;
     }).join("");
   }
+  // manual resolve — guarantees a solved ticket + metrics update regardless of the agent
+  document.getElementById('ticketList').addEventListener('click',(e)=>{
+    const b=e.target.closest('.tkdone'); if(!b) return;
+    const t=loadTk(); const tk=t.find(x=>x.id===b.dataset.id);
+    if(tk){ tk.status="resolved"; tk.resolvedAt=Date.now(); saveTk(t); renderTickets(); renderUserMetrics(); }
+  });
   function escapeHtml(s){ return (s||"").replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
   function addTicket(subject, detail, cat){
@@ -276,7 +284,7 @@ function connect(){
 }
 connect();
 
-function send(obj){ ws && ws.readyState===1 && ws.send(JSON.stringify(obj)); }
+function send(obj){ if(ws && ws.readyState===1){ ws.send(JSON.stringify(obj)); return true; } connect(); return false; }
 function addMsg(who,t){ const d=document.createElement('div'); d.className='msg '+who;
   d.textContent=(who==='u'?'You: ':'Agent: ')+t; const m=document.getElementById('msgs');
   m.appendChild(d); m.parentElement.scrollTop=m.parentElement.scrollHeight; }
@@ -306,13 +314,30 @@ document.getElementById('sendBtn').onclick = ()=>{
   addMsg('u',t); send({type:'text', text:t}); document.getElementById('txt').value='';
 };
 
-// screenshot upload
+// screenshot upload — downscale client-side so the payload stays well under the WS
+// message limit and vision runs faster (raw screenshots can be several MB of base64).
 document.getElementById('shotBtn').onclick = ()=> document.getElementById('file').click();
 document.getElementById('file').onchange = (e)=>{
-  const f=e.target.files[0]; if(!f) return;
+  const f=e.target.files[0]; if(!f){ return; }
+  const deliver=(b64)=>{
+    const ok=send({type:'image', image:b64});
+    addMsg('u', ok ? '📷 screenshot sent' : '⚠ connection hiccup — give it a second and click 📷 again');
+  };
   const rd=new FileReader();
-  rd.onload=()=> send({type:'image', image: rd.result.split(',')[1]});
+  rd.onload=()=>{
+    const img=new Image();
+    img.onload=()=>{
+      const max=1280, scale=Math.min(1, max/Math.max(img.width,img.height));
+      const c=document.createElement('canvas');
+      c.width=Math.round(img.width*scale); c.height=Math.round(img.height*scale);
+      c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+      deliver(c.toDataURL('image/jpeg',0.85).split(',')[1]);
+    };
+    img.onerror=()=> deliver(rd.result.split(',')[1]);
+    img.src=rd.result;
+  };
   rd.readAsDataURL(f);
+  e.target.value='';   // reset so picking the SAME file again still fires onchange
 };
 
 // push-to-talk (MediaRecorder -> base64 -> Deepgram STT server-side)

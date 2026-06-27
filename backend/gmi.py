@@ -136,13 +136,15 @@ def _looks_confirmed(transcript: list[str], screen_reading: str | None) -> bool:
 def read_screen(image_bytes: bytes) -> str:
     """Vision: describe what's on the user's screenshot."""
     b64 = base64.b64encode(image_bytes).decode()
+    # sniff the real format so the data URL mime is honest (widget now sends JPEG).
+    mime = "image/png" if image_bytes[:8].startswith(b"\x89PNG") else "image/jpeg"
     try:
         resp = _client.chat.completions.create(
             model=VISION,
             messages=[{"role": "user", "content": [
                 {"type": "text", "text": "Describe this computer screen for an IT agent: "
                  "which app/window, what's selected, and any error. Be concise."},
-                {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{b64}"}},
+                {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{b64}"}},
             ]}],
             temperature=0.2,
         )

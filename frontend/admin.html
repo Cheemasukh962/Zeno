@@ -276,18 +276,45 @@ function App(){
 
   useEffect(()=>{
     let on = true;
-    // Try the live endpoint first; fall back to the bundled mock so the dashboard
-    // always renders. When the backend ships /admin/activity, this goes live untouched.
-    const fetchJson = async (url)=>{
-      const r = await fetch(url, {cache:"no-store"});
-      if(!r.ok) throw new Error(r.status);
-      return r.json();
+    // Aggregate EVERY user's tickets (each user portal writes zeno_tickets_<email>),
+    // so the admin reflects real user activity live — same browser, no backend needed.
+    const readAllTickets = ()=>{
+      const all=[];
+      for(let i=0;i<localStorage.length;i++){
+        const k=localStorage.key(i);
+        if(k && k.indexOf("zeno_tickets_")===0){
+          try{ (JSON.parse(localStorage.getItem(k))||[]).forEach(t=>all.push(t)); }catch(e){}
+        }
+      }
+      return all;
     };
+    const lvl = (t)=> /hack|comprom|password|phish|breach/i.test((t.subject||"")+" "+(t.detail||"")) ? "high"
+                    : (t.status==="resolved" ? "low" : "medium");
     const poll = async ()=>{
-      try { const d = await fetchJson(LIVE_SOURCE); if(on){ setData(d); setErr(false); } return; }
-      catch(e){ /* endpoint not live yet -> fall back to mock */ }
-      try { const d = await fetchJson(MOCK_SOURCE); if(on){ setData(d); setErr(false); } }
-      catch(e){ if(on) setErr(true); }
+      const tk = readAllTickets();
+      const open = tk.filter(t=>t.status!=="resolved");
+      const done = tk.filter(t=>t.status==="resolved");
+      let srv = {};
+      try{ const r=await fetch("/metrics",{cache:"no-store"}); if(r.ok) srv=await r.json(); }catch(e){}
+      const data = {
+        agent_status: "live",
+        metrics: {
+          deflected: done.length,
+          saved_usd: done.length*20,
+          library_size: (srv.library_size!=null ? srv.library_size : done.length),
+          cache_hits: (srv.cache_hits!=null ? srv.cache_hits : 0),
+          active: open.length,
+        },
+        active: open.slice().reverse().map(t=>({
+          call_id: t.id, scenario_title: t.subject, complexity: lvl(t),
+          step_idx:0, step_total:1, started_at: t.created,
+        })),
+        history: done.slice().sort((a,b)=>(b.resolvedAt||b.created)-(a.resolvedAt||a.created)).map(t=>({
+          call_id: t.id, scenario_title: t.subject, complexity: lvl(t),
+          status:"resolved", cache_hit:false, updated_at: t.resolvedAt||t.created,
+        })),
+      };
+      if(on){ setData(data); setErr(false); }
     };
     poll(); const id = setInterval(poll, POLL_MS);
     return ()=>{ on=false; clearInterval(id); };

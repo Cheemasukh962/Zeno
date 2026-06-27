@@ -9,4 +9,4 @@ COPY frontend ./frontend
 
 # AgentBox routes external HTTPS to container port 8080 by default.
 EXPOSE 8080
-CMD ["uvicorn", "backend.app:app", "--host", "0.0.0.0", "--port", "8080"]
+CMD ["uvicorn", "backend.app:app", "--host", "0.0.0.0", "--port", "8080", "--ws-max-size", "16777216"]
