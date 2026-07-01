@@ -8,7 +8,7 @@ personalized guide you keep for next time.
 > *before* they ever reach a Tier-1 human. Same project, just the working name.
 
 ---
-
+https://docs.google.com/presentation/d/1GW-i6aTiR3vjeLTnY6XNBa6H7angwKPldArdP8_4S-Q/edit?usp=sharing
 ## The idea in 30 seconds
 
 - 50–80% of IT tickets are repetitive Tier-1 stuff (drive mapping, sign-in loops, "how do I export"). Each one costs ~$20 of an engineer's time.
